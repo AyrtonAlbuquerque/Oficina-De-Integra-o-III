@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from src.database import setup
 from src.blueprints.user import user_blueprint
+from src.blueprints.classification import classification_blueprint
 
 
 # configuration
@@ -18,6 +19,7 @@ setup()
 CORS(app, resources={r'/*': {'origins': '*'}})
 
 app.register_blueprint(user_blueprint)
+app.register_blueprint(classification_blueprint)
 
 # sanity check route
 @app.route('/ping', methods=['GET'])
