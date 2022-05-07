@@ -1,9 +1,9 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from src.database import setup
+from src.config import PORT
 from src.blueprints.user import user_blueprint
 from src.blueprints.classification import classification_blueprint
-
 
 # configuration
 DEBUG = True
@@ -28,4 +28,4 @@ def ping_pong():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=PORT)
