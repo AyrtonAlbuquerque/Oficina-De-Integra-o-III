@@ -15,6 +15,7 @@ transaction_blueprint = Blueprint('transaction_blueprint', __name__,  url_prefix
 def send_transaction(user={}):
     try:
         transaction = request.json
+        if transaction['amount'] <= 0: raise Exception('NegativeAmount')
         if not UserDAO.get(transaction['to_account']): raise NotFound
         TransactionDAO.transact(
             user['username'],
