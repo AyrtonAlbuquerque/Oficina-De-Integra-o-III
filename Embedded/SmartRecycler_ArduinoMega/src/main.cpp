@@ -119,7 +119,6 @@ void setup() {
 /* -------------------------------------------------------------------------- */
 void loop() {
     long start;
-    Waste item;
 
     // If not processing waste
     if (!processing) {
@@ -132,6 +131,13 @@ void loop() {
             delay(INITIAL_DELAY);
             // Notify ESP32 to take a picture and get classification
             Serial3.println(".");
+        } else {
+            // If not processing, check and display messages from ESP32
+            if (Serial3.available()) {
+                display.clearDisplay();
+                display.println(Serial3.readStringUntil('\r'));
+                display.display();
+            }
         }
     } else {
         // While processing timeout has not been reached
@@ -139,7 +145,7 @@ void loop() {
             // If there is a response from ESP32
             if (Serial3.available()) {
                 // Get and parse the response string
-                item = parseResponse(Serial3.readStringUntil('\r'));
+                Waste item = parseResponse(Serial3.readStringUntil('\r'));
 
                 // If item type is -1 than its just a message from ESP32
                 if (item.type == -1) {
