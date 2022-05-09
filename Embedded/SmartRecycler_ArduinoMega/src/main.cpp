@@ -3,6 +3,8 @@
 #include <Servo.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <qrcode.h>
+#include <ArduinoJson.h>
 
 /* -------------------------------------------------------------------------- */
 /*                                   Defines                                  */
@@ -27,6 +29,10 @@
 #define PROCESS_TIMEOUT 15000
 #define CONTAINER_COUNT 4
 #define CONTAINER_FULL  10
+#define IR_TIME         1000
+#define INITIAL_DELAY   2000
+#define QRCODE_VERSION  3
+#define QRCODE_ECC      ECC_LOW
 #define RECYCLER_ID     0
 
 /* -------------------------------------------------------------------------- */
@@ -36,7 +42,16 @@ typedef struct waste_t {
     int type;
     String code;
     String message;
-} waste;
+} Waste;
+
+typedef struct led_t
+{
+    int metal;
+    int plastic;
+    int paper;
+    int other;
+} Led;
+
 
 /* -------------------------------------------------------------------------- */
 /*                                   Globals                                  */
@@ -44,6 +59,7 @@ typedef struct waste_t {
 Servo servoT;
 Servo servoL;
 Servo servoR;
+Led containers;
 bool processing;
 
 /* -------------------------------------------------------------------------- */
@@ -51,11 +67,11 @@ bool processing;
 /* -------------------------------------------------------------------------- */
 Adafruit_SSD1306 display(WIDTH, HEIGHT, &Wire, -1);
 
-waste parseResponse(String response);
+Waste parseResponse(String response);
 
-void recycle(waste item);
+void recycle(Waste item);
 
-String generateQRCode(waste item);
+void generateQRCode(Waste item);
 
 void updateLED(int container);
 
@@ -74,9 +90,28 @@ void setup() {
     pinMode(ECHO1, INPUT);
     pinMode(ECHO2, INPUT);
     pinMode(ECHO3, INPUT);
+    pinMode(LED1_PIN, OUTPUT);
+    pinMode(LED2_PIN, OUTPUT);
+    pinMode(LED3_PIN, OUTPUT);
+    pinMode(LED4_PIN, OUTPUT);
+    pinMode(TRIGGER1, OUTPUT);
+    pinMode(TRIGGER2, OUTPUT);
+    pinMode(TRIGGER3, OUTPUT);
+    pinMode(TRIGEGR4, OUTPUT);
 
-    // Setup the serial ports
+    // Setup the serial
     Serial3.begin(BOUD_RATE);
+
+    // Initialial Container setup
+    containers.metal = LOW;
+    containers.plastic = LOW;
+    containers.paper = LOW;
+    containers.other = LOW;
+
+    // Initial display setup
+    display.clearDisplay();
+    display.println("Smart Recycler");
+    display.display();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -84,17 +119,17 @@ void setup() {
 /* -------------------------------------------------------------------------- */
 void loop() {
     long start;
-    waste item;
+    Waste item;
 
     // If not processing waste
     if (!processing) {
-        // If the IR Sensor is active than start processing
-        if (digitalRead(IR1_PIN) == HIGH && digitalRead(IR2_PIN) == HIGH) {
+        // If the IR Sensor is active for a minimal duration than start processing
+        if (checkSensor()) {
             processing = true;
             start = millis();
 
             // Waste processing begins. wait for a moment
-            delay(3000);
+            delay(INITIAL_DELAY);
             // Notify ESP32 to take a picture and get classification
             Serial3.println(".");
         }
@@ -104,11 +139,12 @@ void loop() {
             // If there is a response from ESP32
             if (Serial3.available()) {
                 // Get and parse the response string
-                item = parseResponse(Serial3.readString());
+                item = parseResponse(Serial3.readStringUntil('\r'));
 
-                // If item message is not empty than its just a message from ESP32
-                if (item.message != "") {
-                    // Display the message in the display
+                // If item type is -1 than its just a message from ESP32
+                if (item.type == -1) {
+                    // Display the message in the screen
+                    display.clearDisplay();
                     display.println(item.message);
                     display.display();
                     processing = false;
@@ -118,6 +154,7 @@ void loop() {
             }
         } else {
             // Timeout reached, end processing
+            display.clearDisplay();
             display.println("Smart Recycler");
             display.display();
             processing = false;
@@ -129,47 +166,80 @@ void loop() {
 /* -------------------------------------------------------------------------- */
 /*                                  Functions                                 */
 /* -------------------------------------------------------------------------- */
-waste parseResponse(String response) {
-    waste item;
+Waste parseResponse(String response) {
+    Waste item;
 
-    // Initial setup
+    // Default setup
     item.type = -1;
     item.code = "";
     item.message = "";
 
     if (response != "") {
-        // Classification logic based on response
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, response);
+
+        // If an error occured while hadling the response than set message to response
+        if (error) {
+            item.message = response;
+        } else {
+            // Set the returned information
+            item.type = doc["type"].as<int>();
+            item.code = doc["code"].as<String>();
+        }
     }
 
     return item;
 }
 
-void recycle(waste item) {
-    // Waste treatment based on type
-    if (item.type == 0)                                             // Soda cans
-        moveServos(servoT, 0, 90, servoR, 0, 90);
-    else if (item.type == 1 || item.type == 2)                      // Juice boxes | Crumpled paper
-        moveServos(servoT, 0, 90, servoR, 180, 90);
-    else if (item.type == 3 || item.type == 4 || item.type == 5)   // Plastic bottles | Plastic cups | Chip bags
-        moveServos(servoT, 180, 90, servoL, 0, 90);
-    else                                                            // Others
-        moveServos(servoT, 180, 90, servoL, 180, 90);
-
-    // Generate and Show QRCode
-    display.println(generateQRCode(item));
-    display.display();
-
-    // Check containers levels
+void recycle(Waste item) {
+    // Update the containers leves
     for (size_t i = 0; i < CONTAINER_COUNT; i++) {
         updateLED(i);
     }
+
+    // Waste treatment based on type
+    if (item.type == 0 && containers.metal == LOW)                                              // Soda cans
+        moveServos(servoT, 0, 90, servoR, 0, 90);
+    else if ((item.type == 1 || item.type == 2) && containers.paper == LOW)                     // Juice boxes | Crumpled paper
+        moveServos(servoT, 0, 90, servoR, 180, 90);
+    else if ((item.type == 3 || item.type == 4 || item.type == 5) && containers.plastic == LOW) // Plastic bottles | Plastic cups | Chip bags
+        moveServos(servoT, 180, 90, servoL, 0, 90);
+    else                                                                                        // Others
+        moveServos(servoT, 180, 90, servoL, 180, 90);
+
+    // Generate and Show QRCode
+    generateQRCode(item);
 }
 
-String generateQRCode(waste item) {
-    // QRCode logic
+void generateQRCode(Waste item) {
+    QRCode qrcode;
+    uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
+    String text = String(RECYCLER_ID) + ";" + String(item.type) + ";" + item.code;
+    int cursor_x = 4;
+    int cursor_y = 10;
+    int offset_x = 62;
+    int offset_y = 3;
+    int font_height = 12;
 
+    // Create the QRCode
+    qrcode_initText(&qrcode, data, QRCODE_VERSION, QRCODE_ECC, text.c_str());
 
-    return "";
+    // Prepare the display
+    display.clearDisplay();
+    for (int y = 0; y < qrcode.size; y++) {
+        for (int x = 0; x < qrcode.size; x++) {
+            int newX = offset_x + (2 * x);
+            int newY = offset_y + (2 * y);
+
+            if (qrcode_getModule(&qrcode, x, y)) {
+                display.fillRect(newX, newY, 2, 2, 0);
+            } else {
+                display.fillRect(newX, newY, 2, 2, 1);
+            }
+        }
+    }
+    display.setTextColor(1, 0);
+    display.display();
 }
 
 void updateLED(int container) {
@@ -192,7 +262,11 @@ void updateLED(int container) {
     // Calculating the distance. Speed of sound wave divided by 2 (go and back)
     distance = duration * 0.034 / 2;
 
-    // Update the led
+    // Update the leds and the containers struct
+    containers.metal = (container == 0) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
+    containers.paper = (container == 1) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.paper;
+    containers.metal = (container == 2) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
+    containers.metal = (container == 3) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
     digitalWrite(led, ((distance < CONTAINER_FULL) ? LOW : HIGH));
 }
 
@@ -204,4 +278,12 @@ void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, in
     servo2.write(value2);
     delay(1000);
     servo2.write(base2);
+}
+
+bool checkSensor() {
+    if (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW) {
+        delay(IR_TIME);
+        return (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW) ? true : false;
+    }
+    return false;
 }
