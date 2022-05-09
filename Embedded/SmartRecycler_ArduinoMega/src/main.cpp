@@ -77,6 +77,8 @@ void updateLED(int container);
 
 void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, int value2);
 
+bool checkSensor();
+
 /* -------------------------------------------------------------------------- */
 /*                                    Setup                                   */
 /* -------------------------------------------------------------------------- */
@@ -289,7 +291,7 @@ void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, in
 bool checkSensor() {
     if (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW) {
         delay(IR_TIME);
-        return (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW) ? true : false;
+        return (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW);
     }
     return false;
 }
