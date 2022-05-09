@@ -4,6 +4,7 @@ from src.database import setup
 from src.config import PORT
 from src.blueprints.user import user_blueprint
 from src.blueprints.classification import classification_blueprint
+from src.blueprints.transaction import transaction_blueprint
 
 # configuration
 DEBUG = True
@@ -16,10 +17,11 @@ app.config.from_object(__name__)
 setup()
 
 # enable CORS
-CORS(app, resources={r'/*': {'origins': '*'}})
+CORS(app)
 
 app.register_blueprint(user_blueprint)
 app.register_blueprint(classification_blueprint)
+app.register_blueprint(transaction_blueprint)
 
 # sanity check route
 @app.route('/ping', methods=['GET'])

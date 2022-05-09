@@ -6,3 +6,6 @@ class InvalidRedeemCode(Exception):
 
 class NotFound(Exception):
   pass
+
+class UserWithSameName(Exception):
+  pass

@@ -5,7 +5,10 @@
       color="primary"
       dark
     >
-      <v-app-bar-nav-icon v-if="false" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon
+        v-if="menu.length"
+        @click.stop="drawer = !drawer">
+      </v-app-bar-nav-icon>
 
       <v-btn
         v-if="backButtonRoute"
@@ -26,7 +29,7 @@
 
       <v-spacer></v-spacer>
 
-      <v-menu offset-y>
+      <v-menu offset-y v-if="username">
         <template v-slot:activator="{ on, attrs }">
           <v-btn
             v-bind="attrs"
@@ -38,13 +41,14 @@
         </template>
         <v-list>
           <v-list-item>
-            <v-list-item-title class="subtitle-1">iandouglas.1996</v-list-item-title>
+            <v-list-item-title class="subtitle-1">{{ username }}</v-list-item-title>
           </v-list-item>
           <v-divider />
           <v-list-item>
             <v-btn
               block
               raised
+              @click="logout"
             >
               <v-icon>mdi-logout</v-icon>
               Sign out
@@ -56,6 +60,7 @@
 
     <v-main>
       <v-navigation-drawer
+        v-if="menu.length"
         v-model="drawer"
         absolute
         temporary
@@ -65,48 +70,84 @@
           dense
         >
           <v-list-item-group
-            v-model="group"
             active-class="deep-purple--text text--accent-4"
           >
-            <v-list-item>
-              <v-list-item-title>Foo</v-list-item-title>
-            </v-list-item>
-
-            <v-list-item>
-              <v-list-item-title>Bar</v-list-item-title>
-            </v-list-item>
-
-            <v-list-item>
-              <v-list-item-title>Fizz</v-list-item-title>
-            </v-list-item>
-
-            <v-list-item>
-              <v-list-item-title>Buzz</v-list-item-title>
+            <v-list-item
+              v-for="item of menu"
+              :key="item.route.name"
+              @click.stop="$router.push(item.route)">
+              <v-list-item-title>
+                {{ item.viewName }}
+              </v-list-item-title>
             </v-list-item>
           </v-list-item-group>
         </v-list>
       </v-navigation-drawer>
       <router-view/>
+      <v-snackbar
+        v-model="snackbar"
+        :timeout="3000"
+      >
+        {{ snackbarMessage }}
+      </v-snackbar>
     </v-main>
   </v-app>
 </template>
 
 <script>
+import jwtDecode from 'jwt-decode';
 
 export default {
   name: 'App',
   data: () => ({
     drawer: false,
+    snackbar: false,
+    snackbarMessage: '',
   }),
   computed: {
     backButtonRoute() {
-      console.log(this.$route);
-      return '';
+      if (!this.$route.meta) return false;
+      if (!this.$route.meta.backButtonRoute) return false;
+      return this.$route.meta.backButtonRoute;
     },
+    getUsername() {
+      if (!this.$route.meta) return false;
+      if (this.$route.meta.menu)  return true;
+      return false;
+    },
+    menu() {
+      if (!this.$route.meta) return [];
+      if (!this.$route.meta.menu) return [];
+      return this.$route.meta.menu;
+    },
+    username() {
+      if (!this.getUsername) return '';
+      const authToken = this.$cookies.get('authentication-token');
+      if (!authToken) return '';
+
+      try {
+        const decoded = jwtDecode(authToken);
+        let username = decoded.username.split('@');
+        if (username.length > 1) username.pop();
+        return username.join('');
+      } catch (err) {
+        return '';
+      }
+    },
+  },
+  created() {
+    this.$alert.onAlert = (message) => {
+      this.snackbar = true;
+      this.snackbarMessage = message;
+    }
   },
   methods: {
     goBack() {
-      console.log('backButton', this.backButtonRoute);
+      this.$router.push(this.backButtonRoute);
+    },
+    logout() {
+      this.$cookies.remove('authentication-token');
+      this.$router.push({ name: 'SignIn' });
     }
   }
 };
