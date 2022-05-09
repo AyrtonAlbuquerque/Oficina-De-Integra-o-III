@@ -1,104 +1,46 @@
 #include <Arduino.h>
-#include <esp_camera.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <esp32cam.h>
 
 /* -------------------------------------------------------------------------- */
-/*                     Defines for CAMERA_MODEL_AI_THINKER                    */
+/*                                   Defines                                  */
 /* -------------------------------------------------------------------------- */
-#define PWDN_GPIO_NUM 32
-#define RESET_GPIO_NUM -1
-#define XCLK_GPIO_NUM 0
-#define SIOD_GPIO_NUM 26
-#define SIOC_GPIO_NUM 27
-#define Y9_GPIO_NUM 35
-#define Y8_GPIO_NUM 34
-#define Y7_GPIO_NUM 39
-#define Y6_GPIO_NUM 36
-#define Y5_GPIO_NUM 21
-#define Y4_GPIO_NUM 19
-#define Y3_GPIO_NUM 18
-#define Y2_GPIO_NUM 5
-#define VSYNC_GPIO_NUM 25
-#define HREF_GPIO_NUM 23
-#define PCLK_GPIO_NUM 22
-#define JPEG_QUALITY 10
-#define FRAME_SIZE FRAMESIZE_UXGA
+#define WIDTH       640
+#define HEIGHT      480
+#define QUALITY     95
+#define BOUD_RATE   115200
 
 /* -------------------------------------------------------------------------- */
-/*                     Number of WiFi connection attempts                     */
+/*                                   Globals                                  */
 /* -------------------------------------------------------------------------- */
-#define WIFI_ATTEMPTS 10
-
-/* -------------------------------------------------------------------------- */
-/*                               System Defines                               */
-/* -------------------------------------------------------------------------- */
-#define BOUD_RATE 9600
-
-/* -------------------------------------------------------------------------- */
-/*                              System Constants                              */
-/* -------------------------------------------------------------------------- */
-const char *ssid = "*****";
-const char *password = "*****";
+const char *ssid = "Ayrton_2G";
+const char *password = "Ayrton297866*";
 const char *url = "http://198.167.0.1/classification/request";
 
 /* -------------------------------------------------------------------------- */
-/*                            Function Declarations                           */
+/*                                Declarations                                */
 /* -------------------------------------------------------------------------- */
-bool connectWiFi();
+void connectWiFi();
 
 /* -------------------------------------------------------------------------- */
 /*                                    Setup                                   */
 /* -------------------------------------------------------------------------- */
 void setup() {
-    // Setup the serial communication
+    // Initialize Serial
     Serial.begin(BOUD_RATE);
 
-    // connect to WiFi
-    if (connectWiFi()) {
-        // Send message back to Arduinno
-        Serial.println("Connected to WiFi");
-    }
+    // Camera configuration
+    {
+        using namespace esp32cam;
+        Config cfg;
+        cfg.setPins(pins::AiThinker);
+        cfg.setResolution(esp32cam::Resolution::find(WIDTH, HEIGHT));
+        cfg.setBufferCount(2);
+        cfg.setJpeg(QUALITY);
 
-    // Setup camera configuration
-    camera_config_t config;
-    config.ledc_channel = LEDC_CHANNEL_0;
-    config.ledc_timer = LEDC_TIMER_0;
-    config.pin_d0 = Y2_GPIO_NUM;
-    config.pin_d1 = Y3_GPIO_NUM;
-    config.pin_d2 = Y4_GPIO_NUM;
-    config.pin_d3 = Y5_GPIO_NUM;
-    config.pin_d4 = Y6_GPIO_NUM;
-    config.pin_d5 = Y7_GPIO_NUM;
-    config.pin_d6 = Y8_GPIO_NUM;
-    config.pin_d7 = Y9_GPIO_NUM;
-    config.pin_xclk = XCLK_GPIO_NUM;
-    config.pin_pclk = PCLK_GPIO_NUM;
-    config.pin_vsync = VSYNC_GPIO_NUM;
-    config.pin_href = HREF_GPIO_NUM;
-    config.pin_sscb_sda = SIOD_GPIO_NUM;
-    config.pin_sscb_scl = SIOC_GPIO_NUM;
-    config.pin_pwdn = PWDN_GPIO_NUM;
-    config.pin_reset = RESET_GPIO_NUM;
-    config.xclk_freq_hz = 20000000;
-    config.pixel_format = PIXFORMAT_JPEG;
-
-    // Configure frame size and quality
-    if (psramFound()) {
-        config.frame_size = FRAME_SIZE;
-        config.jpeg_quality = JPEG_QUALITY;
-        config.fb_count = 2;
-    } else {
-        config.frame_size = FRAMESIZE_SVGA;
-        config.jpeg_quality = 12;
-        config.fb_count = 1;
-    }
-
-    // Initialize the camera
-    esp_err_t error = esp_camera_init(&config);
-    if (error != ESP_OK) {
-        Serial.printf("Camera initialization failed with error 0x%x", error);
-        return;
+        // Initialize the camera
+        Serial.println(Camera.begin(cfg) ? "Camera initialized" : "Camera initialization failed");
     }
 }
 
@@ -106,66 +48,65 @@ void setup() {
 /*                                    Loop                                    */
 /* -------------------------------------------------------------------------- */
 void loop() {
-    camera_fb_t *fb = NULL;
     HTTPClient client;
     int httpCode;
 
-    // Message received from Arduino
-    if (Serial.available()) {
-        // Take a picture
-        fb = esp_camera_fb_get();
-        if (!fb) {
-            Serial.println("Failed to capture image");
-        } else {
-            // Begin connection with the server
-            client.begin(url);
-
-            // If connected
-            if (client.connected()) {
-                // Send the request with the whole image in the body
-                httpCode = client.POST(fb->buf, fb->len);
-
-                // If code is negative an error accoured
-                if (httpCode > 0) {
-                    // Image processed by the server
-                    if (httpCode == HTTP_CODE_OK) {
-                        // Get response and send it to Arduino
-                        Serial.println(client.getString());
-                    }
-                } else {
-                    // On error send it to Arduino as well
-                    Serial.printf("HTTP POST failed with error: %s\n", client.errorToString(httpCode).c_str());
-                }
-                // End the client connection
-                client.end();
+    // If connected to WiFi
+    if (WiFi.status() == WL_CONNECTED) {
+        // If message received from Arduino
+        if (Serial.available()) {
+            // Take a picture
+            auto frame = esp32cam::Camera.capture();
+            if (frame == nullptr) {
+                Serial.println("Failed to capture image");
             } else {
-                // Could not connect to server, send message to Arduino
-                Serial.println("Could not connect to server");
+                // Begin connection with the server
+                client.begin(url);
+
+                // If connected
+                if (client.connected()) {
+                    // Set header content type to image/jpeg
+                    client.addHeader("Content-Type", "image/jpg");
+                    // Send the request with the whole image in the body
+                    httpCode = client.POST(frame->data(), frame->size());
+
+                    // If code is negative an error accoured
+                    if (httpCode > 0) {
+                        // Image processed by the server
+                        if (httpCode == HTTP_CODE_OK) {
+                            // Get response and send it to Arduino
+                            Serial.println(client.getString());
+                        }
+                    } else {
+                        // On error send it to Arduino as well
+                        Serial.printf("HTTP POST failed with error: %s\n", client.errorToString(httpCode).c_str());
+                    }
+                    // End the client connection
+                    client.end();
+                } else {
+                    // Could not connect to server, send message to Arduino
+                    Serial.println("Could not connect to server");
+                }
+                // Release the frame
+                frame.release();
             }
-            // Return the frame buffer to be reused again
-            esp_camera_fb_return(fb);
         }
+    } else {
+        connectWiFi();
     }
     delay(10);
 }
 
 /* -------------------------------------------------------------------------- */
-/*                               WiFi Connection                              */
+/*                                  Functions                                 */
 /* -------------------------------------------------------------------------- */
-bool connectWiFi() {
-    int attempt = 0;
+void connectWiFi() {
+    // Send message to be displayed
+    Serial.println("Trying to connect to WiFi...");
 
     // Try to connect to wifi
     WiFi.begin(ssid, password);
 
-    // While not connected keep trying for the number of attempts
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        // If not connect yet already over the max number of attempts
-        if (attempt > WIFI_ATTEMPTS) { return false; }
-        // Increase number of attempts
-        attempt++;
-    }
-
-    return true;
+    // While not connected keep trying until a connection is established
+    while (WiFi.status() != WL_CONNECTED) { delay(500); }
 }

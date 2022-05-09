@@ -5,7 +5,7 @@
 #include <Adafruit_SSD1306.h>
 
 /* -------------------------------------------------------------------------- */
-/*                               System Defines                               */
+/*                                   Defines                                  */
 /* -------------------------------------------------------------------------- */
 #define ECHO1           2
 #define ECHO2           3
@@ -23,14 +23,14 @@
 #define IR2_PIN         31
 #define WIDTH           128
 #define HEIGHT          64
-#define BOUD_RATE       9600
+#define BOUD_RATE       115200
 #define PROCESS_TIMEOUT 15000
 #define CONTAINER_COUNT 4
 #define CONTAINER_FULL  10
 #define RECYCLER_ID     0
 
 /* -------------------------------------------------------------------------- */
-/*                                System Types                                */
+/*                                    Types                                   */
 /* -------------------------------------------------------------------------- */
 typedef struct waste_t {
     int type;
@@ -39,7 +39,7 @@ typedef struct waste_t {
 } waste;
 
 /* -------------------------------------------------------------------------- */
-/*                              System Variables                              */
+/*                                   Globals                                  */
 /* -------------------------------------------------------------------------- */
 Servo servoT;
 Servo servoL;
@@ -47,7 +47,7 @@ Servo servoR;
 bool processing;
 
 /* -------------------------------------------------------------------------- */
-/*                             System Declarations                            */
+/*                                Declarations                                */
 /* -------------------------------------------------------------------------- */
 Adafruit_SSD1306 display(WIDTH, HEIGHT, &Wire, -1);
 

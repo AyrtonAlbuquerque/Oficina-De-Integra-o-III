@@ -6,3 +6,5 @@ Embedded/SmartRecycler_ArduinoMega/build/
 Inference/neural_network_resnet/dataset/
 
 Embedded/GoogleDrive/SmartRecycler_ESP32_GoogleDrive/build/
+
+Embedded/SmartRecycler_ESP32/build/
