@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <HTTPClient.h>
 #include <WiFi.h>
 #include <esp32cam.h>
+#include <esp_camera.h>
 
 /* -------------------------------------------------------------------------- */
 /*                                   Defines                                  */
@@ -15,15 +15,23 @@
 /* -------------------------------------------------------------------------- */
 /*                                   Globals                                  */
 /* -------------------------------------------------------------------------- */
-const char* ssid = "Ayrton_2G";
-const char* password = "Ayrton297866*";
-const char* url = "http://198.167.0.1/classification/request";
-const char* host = "198.167.0.1";
+const char *ssid = "Ayrton_2G";
+const char *password = "Ayrton297866*";
+const String url = "http://198.167.0.1/classification/request";
+const String host = "198.167.0.1";
+const int port = 80;
+const String recyclerID = "0";
+int status = WL_IDLE_STATUS;
+String bound = "boundry";
 
 /* -------------------------------------------------------------------------- */
 /*                                Declarations                                */
 /* -------------------------------------------------------------------------- */
 void connectWiFi();
+
+void sendImage(camera_fb_t *frame, WiFiClient client);
+
+void writeClient(camera_fb_t *frame, WiFiClient client);
 
 void sendResponse(String message);
 
@@ -48,12 +56,9 @@ void setup() {
     }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                    Loop                                    */
-/* -------------------------------------------------------------------------- */
 void loop() {
-    HTTPClient client;
-    int httpCode;
+    camera_fb_t *frame = NULL;
+    WiFiClient client;
 
     // If connected to WiFi
     if (WiFi.status() == WL_CONNECTED) {
@@ -63,39 +68,23 @@ void loop() {
             Serial.readString();
 
             // Take a picture
-            auto frame = esp32cam::Camera.capture();
-            if (frame == nullptr) {
+            frame = esp_camera_fb_get();
+            if (!frame) {
                 sendResponse("Failed to capture image");
             } else {
                 // Begin connection with the server
-                client.begin(url);
-
-                // If connected
-                if (client.connected()) {
-                    // Set header content type
-                    client.addHeader("Content-Type", "multipart/form-data");
-                    // Send the request with the whole image in the body
-                    httpCode = client.POST(frame->data(), frame->size());
-
-                    // If code is negative an error accoured
-                    if (httpCode > 0) {
-                        // Image processed by the server
-                        if (httpCode == HTTP_CODE_OK) {
-                            // Send response to Arduino
-                            sendResponse(client.getString());
-                        }
-                    } else {
-                        // On error send it to Arduino as well
-                        sendResponse("HTTP POST failed");
-                    }
-                    // End the client connection
-                    client.end();
+                if (!client.connect(host.c_str(), port)) {
+                    sendResponse("Connection to the server failed!");
                 } else {
-                    // Could not connect to server, send message to Arduino
-                    sendResponse("Could not connect to server");
+                    // Send request to server and get response
+                    sendImage(frame, client);
+                    // Send response to Arduino
+                    sendResponse(client.readStringUntil('\r'));
+                    // End the client connection
+                    client.stop();
                 }
-                // Release the frame
-                frame.release();
+                // Return the frame buffer to be reused again
+                esp_camera_fb_return(frame);
             }
         }
     } else {
@@ -116,6 +105,43 @@ void connectWiFi() {
 
     // While not connected keep trying until a connection is established
     while (WiFi.status() != WL_CONNECTED) { delay(500); }
+}
+
+void sendImage(camera_fb_t *frame, WiFiClient client) {
+    String form = "--" + bound + "\r\nContent-Disposition: form-data; name=\"recyclerID\"" + "\r\n\r\n" + recyclerID + "\r\n";
+    String head = "--" + bound + "\r\nContent-Disposition: form-data; name=\"file\";filename=\"image.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
+    String tail = "\r\n--" + bound + "--\r\n";
+    uint32_t length = form.length() + frame->len + head.length() + tail.length();
+    char buffer[form.length() + 1];
+    form.toCharArray(buffer, form.length() + 1);
+
+    // Send post
+    client.println("POST " + url + " HTTP/1.1");
+    client.println("Host: " + host);
+    client.println("Content-Length: " + String(length));
+    client.println("Content-Type: multipart/form-data; boundary=" + bound);
+    client.println();
+    client.write(buffer);
+    client.println();
+    client.print(head);
+    writeClient(frame, client);
+    client.print(tail);
+}
+
+void writeClient(camera_fb_t *frame, WiFiClient client) {
+    uint8_t *buffer = frame->buf;
+    size_t length = frame->len;
+    size_t remainder;
+
+    for (size_t i = 0; i < length; i = i + 1024) {
+        if (i + 1024 < length) {
+            client.write(buffer, 1024);
+            buffer += 1024;
+        } else if (length % 1024 > 0) {
+            remainder = length % 1024;
+            client.write(buffer, remainder);
+        }
+    }
 }
 
 void sendResponse(String message) {

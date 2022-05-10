@@ -39,13 +39,13 @@
 /*                                    Types                                   */
 /* -------------------------------------------------------------------------- */
 typedef struct waste_t {
-    int type;
-    String code;
-    String message;
+    char* host;
+    char* type;
+    char* code;
+    char* message;
 } Waste;
 
-typedef struct led_t
-{
+typedef struct led_t {
     int metal;
     int plastic;
     int paper;
@@ -121,6 +121,7 @@ void setup() {
 /* -------------------------------------------------------------------------- */
 void loop() {
     long start;
+    Waste item;
 
     // If not processing waste
     if (!processing) {
@@ -136,8 +137,9 @@ void loop() {
         } else {
             // If not processing, check and display messages from ESP32
             if (Serial3.available()) {
+                item = parseResponse(Serial3.readStringUntil('\r'));
                 display.clearDisplay();
-                display.println(Serial3.readStringUntil('\r'));
+                display.println(item.message);
                 display.display();
             }
         }
@@ -147,10 +149,10 @@ void loop() {
             // If there is a response from ESP32
             if (Serial3.available()) {
                 // Get and parse the response string
-                Waste item = parseResponse(Serial3.readStringUntil('\r'));
+                item = parseResponse(Serial3.readStringUntil('\r'));
 
-                // If item type is -1 than its just a message from ESP32
-                if (item.type == -1) {
+                // If item type is NULL than its just a message from ESP32
+                if (!item.type) {
                     // Display the message in the screen
                     display.clearDisplay();
                     display.println(item.message);
@@ -175,26 +177,15 @@ void loop() {
 /*                                  Functions                                 */
 /* -------------------------------------------------------------------------- */
 Waste parseResponse(String response) {
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, response);
     Waste item;
 
-    // Default setup
-    item.type = -1;
-    item.code = "";
-    item.message = "";
-
-    if (response != "") {
-        DynamicJsonDocument doc(1024);
-        DeserializationError error = deserializeJson(doc, response);
-
-        // If an error occured while hadling the response than set message to response
-        if (error) {
-            item.message = response;
-        } else {
-            // Set the returned information
-            item.type = doc["type"].as<int>();
-            item.code = doc["code"].as<String>();
-        }
-    }
+    // Parse the response to the item structure
+    item.type = doc["type"];
+    item.host = doc["host"];
+    item.code = doc["code"];
+    item.message = doc["message"];
 
     return item;
 }
@@ -206,13 +197,13 @@ void recycle(Waste item) {
     }
 
     // Waste treatment based on type
-    if (item.type == 0 && containers.metal == LOW)                                              // Soda cans
+    if (strcmp(item.type, "0") && containers.metal == LOW)                                                              // Soda cans
         moveServos(servoT, 0, 90, servoR, 0, 90);
-    else if ((item.type == 1 || item.type == 2) && containers.paper == LOW)                     // Juice boxes | Crumpled paper
+    else if ((strcmp(item.type, "1") || strcmp(item.type, "2")) && containers.paper == LOW)                             // Juice boxes | Crumpled paper
         moveServos(servoT, 0, 90, servoR, 180, 90);
-    else if ((item.type == 3 || item.type == 4 || item.type == 5) && containers.plastic == LOW) // Plastic bottles | Plastic cups | Chip bags
+    else if ((strcmp(item.type, "3") || strcmp(item.type, "4") || strcmp(item.type, "5")) && containers.plastic == LOW) // Plastic bottles | Plastic cups | Chip bags
         moveServos(servoT, 180, 90, servoL, 0, 90);
-    else                                                                                        // Others
+    else                                                                                                                // Others
         moveServos(servoT, 180, 90, servoL, 180, 90);
 
     // Generate and Show QRCode
@@ -222,7 +213,7 @@ void recycle(Waste item) {
 void generateQRCode(Waste item) {
     QRCode qrcode;
     uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
-    String text = String(RECYCLER_ID) + ";" + String(item.type) + ";" + item.code;
+    String text = "http://" + String(item.host) + ":8081?r=" + String(item.code) + "&l=" + String(item.type); //http://<<IP>>:8081?r=<<Redeem code>>&l=<<Classificacao>>
     int cursor_x = 4;
     int cursor_y = 10;
     int offset_x = 62;
