@@ -191,30 +191,30 @@ void loop() {
                 // Get and parse the response string
                 item = parseResponse(Serial3.readStringUntil('\r'));
 
-                // Turn off led tape
-                digitalWrite(LED_TAPE_PIN, HIGH);
-
                 // If item type is NULL than its just a message from ESP32
                 if (!item.type) {
                     // Display the message in the screen
                     display.clearDisplay();
                     display.println(item.message);
                     display.display();
-                } else {
-                    recycle(item);
                 }
+
+                // Turn off led tape and recycle item
+                digitalWrite(LED_TAPE_PIN, HIGH);
+                recycle(item);
                 processing = false;
             }
         } else {
             // Serial.println("Processing timeout");
-            // Turn off led tape
+            // Turn off led tape and recycle item to others
             digitalWrite(LED_TAPE_PIN, HIGH);
+            recycle(item);
+            processing = false;
 
             // Timeout reached, end processing
             display.clearDisplay();
             display.println("Smart Recycler");
             display.display();
-            processing = false;
         }
     }
     // Serial.println("Loop end");  
@@ -249,8 +249,8 @@ void recycle(Waste item) {
     else                                                                                                                // Others
         moveServos(servoT, 180, 90, servoL, 180, 90);
 
-    // Generate and Show QRCode
-    generateQRCode(item);
+    // If type is not NULL, generate and show QRCode
+    if (item.type) { generateQRCode(item); }
 
     // Delay to let the item fall into the bin before updating leds
     delay(500);
