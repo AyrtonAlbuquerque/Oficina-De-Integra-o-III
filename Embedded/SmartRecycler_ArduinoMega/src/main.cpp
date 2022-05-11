@@ -1,11 +1,12 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Servo.h>
-//#include <Adafruit_GFX.h>
+#include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <qrcode.h>
 #include <ArduinoJson.h>
-#include <avr8-stub.h>
+#include "MedianFilterLib2.h"
+// #include <avr8-stub.h> // Debugging only
 
 /* -------------------------------------------------------------------------- */
 /*                                   Defines                                  */
@@ -14,6 +15,10 @@
 #define ECHO2           3
 #define ECHO3           4
 #define ECHO4           5
+#define SERVOT_PIN      8
+#define SERVOL_PIN      9
+#define SERVOR_PIN      10
+#define LED_TAPE_PIN    12
 #define LED1_PIN        23
 #define LED2_PIN        25
 #define LED3_PIN        27
@@ -62,6 +67,7 @@ Servo servoL;
 Servo servoR;
 Led containers;
 bool processing;
+long start;
 
 /* -------------------------------------------------------------------------- */
 /*                                Declarations                                */
@@ -85,10 +91,14 @@ bool checkSensor();
 /* -------------------------------------------------------------------------- */
 void setup() {
     // For debuggig only
-//    debug_init();
+    // debug_init();
 
     // Setup system variables
     processing = false;
+
+    // Setup the serial
+    Serial3.begin(BOUD_RATE);
+    // Serial.begin(BOUD_RATE); // Tests only
 
     // Setup pin modes
     pinMode(IR1_PIN, INPUT);
@@ -104,55 +114,85 @@ void setup() {
     pinMode(TRIGGER2, OUTPUT);
     pinMode(TRIGGER3, OUTPUT);
     pinMode(TRIGEGR4, OUTPUT);
+    pinMode(TRIGEGR4, OUTPUT);
+    pinMode(LED_TAPE_PIN, OUTPUT); 
 
-    // Setup the serial
-    Serial3.begin(BOUD_RATE);
+    // Setup Leds and Led tape
+    digitalWrite(LED1_PIN, HIGH);
+    digitalWrite(LED2_PIN, HIGH);
+    digitalWrite(LED3_PIN, HIGH);
+    digitalWrite(LED4_PIN, HIGH);
+    digitalWrite(LED_TAPE_PIN, HIGH);
+
+    // Setup servos
+    servoT.attach(SERVOT_PIN);
+    servoR.attach(SERVOR_PIN); 
+    servoL.attach(SERVOL_PIN);
 
     // Initialial Container setup
     containers.metal = LOW;
     containers.plastic = LOW;
     containers.paper = LOW;
     containers.other = LOW;
+
+    // Setup de display
+    while (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C));
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 10);    
+    display.display(); 
 }
 
 /* -------------------------------------------------------------------------- */
 /*                                    Loop                                    */
 /* -------------------------------------------------------------------------- */
 void loop() {
-    long start;
     Waste item;
 
     // If not processing waste
     if (!processing) {
+        // Serial.println("Checking IR Sensor");
         // If the IR Sensor is active for a minimal duration than start processing
         if (checkSensor()) {
+            // Serial.println("IR Sensor blocked");  
             processing = true;
             start = millis();
 
             // Waste processing begins. wait for a moment
             delay(INITIAL_DELAY);
+            // Turn on the Led tape
+            digitalWrite(LED_TAPE_PIN, LOW);
             // Notify ESP32 to take a picture and get classification
             Serial3.println(".");
         } else {
+            // Serial.println("Checking for ESP Messages");
             // If not processing, check and display messages from ESP32
             if (Serial3.available()) {
+                // Serial.println("Bytes na serial do ESP32");
                 item = parseResponse(Serial3.readStringUntil('\r'));
                 display.clearDisplay();
                 display.println(item.message);
                 display.display();
             } else {
+                // Serial.println("No messages from ESP, default");
                 display.clearDisplay();
                 display.println("Smart Recycler");
                 display.display();
             }
         }
     } else {
+        // Serial.println("Processing started");
         // While processing timeout has not been reached
         if ((start + PROCESS_TIMEOUT) <= millis()) {
+            // Serial.println("Waiting for ESP response");
             // If there is a response from ESP32
             if (Serial3.available()) {
                 // Get and parse the response string
                 item = parseResponse(Serial3.readStringUntil('\r'));
+
+                // Turn off led tape
+                digitalWrite(LED_TAPE_PIN, HIGH);
 
                 // If item type is NULL than its just a message from ESP32
                 if (!item.type) {
@@ -160,12 +200,16 @@ void loop() {
                     display.clearDisplay();
                     display.println(item.message);
                     display.display();
-                    processing = false;
                 } else {
                     recycle(item);
                 }
+                processing = false;
             }
         } else {
+            // Serial.println("Processing timeout");
+            // Turn off led tape
+            digitalWrite(LED_TAPE_PIN, HIGH);
+
             // Timeout reached, end processing
             display.clearDisplay();
             display.println("Smart Recycler");
@@ -173,6 +217,7 @@ void loop() {
             processing = false;
         }
     }
+    // Serial.println("Loop end");  
     delay(10);
 }
 
@@ -194,11 +239,6 @@ Waste parseResponse(String response) {
 }
 
 void recycle(Waste item) {
-    // Update the containers leves
-    for (size_t i = 0; i < CONTAINER_COUNT; i++) {
-        updateLED(i);
-    }
-
     // Waste treatment based on type
     if (strcmp(item.type, "0") && containers.metal == LOW)                                                              // Soda cans
         moveServos(servoT, 0, 90, servoR, 0, 90);
@@ -211,6 +251,14 @@ void recycle(Waste item) {
 
     // Generate and Show QRCode
     generateQRCode(item);
+
+    // Delay to let the item fall into the bin before updating leds
+    delay(500);
+
+    // Update the containers leves
+    for (size_t i = 0; i < CONTAINER_COUNT; i++) {
+        updateLED(i);
+    }
 }
 
 void generateQRCode(Waste item) {
@@ -245,21 +293,26 @@ void updateLED(int container) {
     int trigger = (container == 0) ? TRIGGER1 : ((container == 1) ? TRIGGER2 : ((container == 2) ? TRIGGER3 : TRIGEGR4));
     int echo = (container == 0) ? ECHO1 : ((container == 1) ? ECHO2 : ((container == 2) ? ECHO3 : ECHO4));
     int led = (container == 0) ? LED1_PIN : ((container == 1) ? LED2_PIN : ((container == 2) ? LED3_PIN : LED4_PIN));
+    MedianFilter2<int> medianFilter(15);
     long duration;
     int distance;
 
-    // Clears the trigger pin condition and sets the trigger pin to HIGH (active) for 10 microseconds
-    digitalWrite(trigger, LOW);
-    delayMicroseconds(2);
-    digitalWrite(trigger, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigger, LOW);
+    for (int i = 0; i < 15; i++) {
+        // Clears the trigger pin condition and sets the trigger pin to HIGH (active) for 10 microseconds
+        digitalWrite(trigger, LOW);
+        delayMicroseconds(2);
+        digitalWrite(trigger, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(trigger, LOW);
 
-    // Reads the echo pin and returns the sound wave travel time in microseconds
-    duration = pulseIn(echo, HIGH);
+        // Reads the echo pin and returns the sound wave travel time in microseconds
+        duration = pulseIn(echo, HIGH);
 
-    // Calculating the distance. Speed of sound wave divided by 2 (go and back)
-    distance = duration * 0.034 / 2;
+        // Calculating the distance. Speed of sound wave divided by 2 (go and back)
+        distance = duration * 0.034 / 2;
+        medianFilter.AddValue(distance);
+    }
+    distance=medianFilter.GetFiltered();
 
     // Update the leds and the containers struct
     containers.metal = (container == 0) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
@@ -271,18 +324,19 @@ void updateLED(int container) {
 
 void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, int value2) {
     servo1.write(value1);
-    delay(1000);
+    delay(3000);
     servo1.write(base1);
     delay(500);
     servo2.write(value2);
-    delay(1000);
+    delay(3000);
     servo2.write(base2);
+    delay(500);
 }
 
 bool checkSensor() {
-    if (digitalRead(IR1_PIN) == HIGH && digitalRead(IR2_PIN) == HIGH) {
+    if (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW) {
         delay(IR_TIME);
-        return (digitalRead(IR1_PIN) == HIGH && digitalRead(IR2_PIN) == HIGH);
+        return (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW);
     }
     return false;
 }
