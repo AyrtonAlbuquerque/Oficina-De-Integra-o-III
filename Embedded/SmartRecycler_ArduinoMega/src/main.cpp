@@ -1,10 +1,11 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Servo.h>
-#include <Adafruit_GFX.h>
+//#include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <qrcode.h>
 #include <ArduinoJson.h>
+#include <avr8-stub.h>
 
 /* -------------------------------------------------------------------------- */
 /*                                   Defines                                  */
@@ -83,6 +84,9 @@ bool checkSensor();
 /*                                    Setup                                   */
 /* -------------------------------------------------------------------------- */
 void setup() {
+    // For debuggig only
+//    debug_init();
+
     // Setup system variables
     processing = false;
 
@@ -109,11 +113,6 @@ void setup() {
     containers.plastic = LOW;
     containers.paper = LOW;
     containers.other = LOW;
-
-    // Initial display setup
-    display.clearDisplay();
-    display.println("Smart Recycler");
-    display.display();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -140,6 +139,10 @@ void loop() {
                 item = parseResponse(Serial3.readStringUntil('\r'));
                 display.clearDisplay();
                 display.println(item.message);
+                display.display();
+            } else {
+                display.clearDisplay();
+                display.println("Smart Recycler");
                 display.display();
             }
         }
@@ -214,11 +217,8 @@ void generateQRCode(Waste item) {
     QRCode qrcode;
     uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
     String text = "http://" + String(item.host) + ":8081?r=" + String(item.code) + "&l=" + String(item.type); //http://<<IP>>:8081?r=<<Redeem code>>&l=<<Classificacao>>
-    int cursor_x = 4;
-    int cursor_y = 10;
     int offset_x = 62;
     int offset_y = 3;
-    int font_height = 12;
 
     // Create the QRCode
     qrcode_initText(&qrcode, data, QRCODE_VERSION, QRCODE_ECC, text.c_str());
@@ -280,9 +280,9 @@ void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, in
 }
 
 bool checkSensor() {
-    if (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW) {
+    if (digitalRead(IR1_PIN) == HIGH && digitalRead(IR2_PIN) == HIGH) {
         delay(IR_TIME);
-        return (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW);
+        return (digitalRead(IR1_PIN) == HIGH && digitalRead(IR2_PIN) == HIGH);
     }
     return false;
 }
