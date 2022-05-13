@@ -74,17 +74,19 @@ long start;
 /* -------------------------------------------------------------------------- */
 Adafruit_SSD1306 display(WIDTH, HEIGHT, &Wire, -1);
 
-Waste parseResponse(String response);
+Waste* parseResponse(String response);
 
-void recycle(Waste item);
+void recycle(Waste *item);
 
-void generateQRCode(Waste item);
+void generateQRCode(Waste *item);
 
 void updateLED(int container);
 
 void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, int value2);
 
 bool checkSensor();
+
+void displayMessage(String message);
 
 /* -------------------------------------------------------------------------- */
 /*                                    Setup                                   */
@@ -136,6 +138,7 @@ void setup() {
     containers.other = LOW;
 
     // Setup de display
+    // Serial.println("Initilizing display...");
     while (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C));
     display.clearDisplay();
     display.setTextSize(1);
@@ -148,7 +151,7 @@ void setup() {
 /*                                    Loop                                    */
 /* -------------------------------------------------------------------------- */
 void loop() {
-    Waste item;
+    Waste *item;
 
     // If not processing waste
     if (!processing) {
@@ -159,6 +162,8 @@ void loop() {
             processing = true;
             start = millis();
 
+            // Display processing massage
+            displayMessage("Processing");
             // Waste processing begins. wait for a moment
             delay(INITIAL_DELAY);
             // Turn on the Led tape
@@ -169,16 +174,19 @@ void loop() {
             // Serial.println("Checking for ESP Messages");
             // If not processing, check and display messages from ESP32
             if (Serial3.available()) {
-                // Serial.println("Bytes na serial do ESP32");
-                item = parseResponse(Serial3.readStringUntil('\r'));
-                display.clearDisplay();
-                display.println(item.message);
-                display.display();
+                // Handle the serial message
+                String response = getResponse();
+                
+                // If it is a valid response
+                if (response != "") {
+                    // Serial.println("Parsing response");
+                    item = parseResponse(response);
+                    displayMessage(item->message);
+                    free(item);
+                }
             } else {
                 // Serial.println("No messages from ESP, default");
-                display.clearDisplay();
-                display.println("Smart Recycler");
-                display.display();
+                displayMessage("Smart Recycler");
             }
         }
     } else {
@@ -188,33 +196,37 @@ void loop() {
             // Serial.println("Waiting for ESP response");
             // If there is a response from ESP32
             if (Serial3.available()) {
-                // Get and parse the response string
-                item = parseResponse(Serial3.readStringUntil('\r'));
+                // Handle the serial message
+                String response = getResponse();
 
-                // If item type is NULL than its just a message from ESP32
-                if (!item.type) {
-                    // Display the message in the screen
-                    display.clearDisplay();
-                    display.println(item.message);
-                    display.display();
+                // If it is a valid message
+                if (response != "") {
+                    // Parse the response string
+                    item = parseResponse(response);
+
+                    // If item type is NULL than its just a message from ESP32
+                    if (!(item->type)) {
+                        // Display the message in the screen
+                        displayMessage(item->message);
+                    }
+
+                    // Turn off led tape and recycle item
+                    digitalWrite(LED_TAPE_PIN, HIGH);
+                    recycle(item);
+                    free(item);
+                    processing = false;
                 }
-
-                // Turn off led tape and recycle item
-                digitalWrite(LED_TAPE_PIN, HIGH);
-                recycle(item);
-                processing = false;
             }
         } else {
             // Serial.println("Processing timeout");
             // Turn off led tape and recycle item to others
             digitalWrite(LED_TAPE_PIN, HIGH);
             recycle(item);
+            free(item);
             processing = false;
 
             // Timeout reached, end processing
-            display.clearDisplay();
-            display.println("Smart Recycler");
-            display.display();
+            displayMessage("Smart Recycler");
         }
     }
     // Serial.println("Loop end");  
@@ -224,47 +236,51 @@ void loop() {
 /* -------------------------------------------------------------------------- */
 /*                                  Functions                                 */
 /* -------------------------------------------------------------------------- */
-Waste parseResponse(String response) {
+Waste* parseResponse(String response) {
+    Waste *item;
     DynamicJsonDocument doc(1024);
     DeserializationError error = deserializeJson(doc, response);
-    Waste item;
+
+    item = (Waste *)malloc(sizeof(Waste));
 
     // Parse the response to the item structure
-    item.type = doc["type"];
-    item.host = doc["host"];
-    item.code = doc["code"];
-    item.message = doc["message"];
+    item->type = doc["type"];
+    item->host = doc["host"];
+    item->code = doc["code"];
+    item->message = doc["message"];
 
     return item;
 }
 
-void recycle(Waste item) {
-    // Waste treatment based on type
-    if (strcmp(item.type, "0") && containers.metal == LOW)                                                              // Soda cans
-        moveServos(servoT, 0, 90, servoR, 0, 90);
-    else if ((strcmp(item.type, "1") || strcmp(item.type, "2")) && containers.paper == LOW)                             // Juice boxes | Crumpled paper
-        moveServos(servoT, 0, 90, servoR, 180, 90);
-    else if ((strcmp(item.type, "3") || strcmp(item.type, "4") || strcmp(item.type, "5")) && containers.plastic == LOW) // Plastic bottles | Plastic cups | Chip bags
-        moveServos(servoT, 180, 90, servoL, 0, 90);
-    else                                                                                                                // Others
-        moveServos(servoT, 180, 90, servoL, 180, 90);
+void recycle(Waste *item) {
+    if (item) {
+        // Waste treatment based on type
+        if (strcmp(item->type, "0") && containers.metal == LOW)                                                                // Soda cans
+            moveServos(servoT, 0, 90, servoR, 0, 90);
+        else if ((strcmp(item->type, "1") || strcmp(item->type, "2")) && containers.paper == LOW)                              // Juice boxes | Crumpled paper
+            moveServos(servoT, 0, 90, servoR, 180, 90);
+        else if ((strcmp(item->type, "3") || strcmp(item->type, "4") || strcmp(item->type, "5")) && containers.plastic == LOW) // Plastic bottles | Plastic cups | Chip bags
+            moveServos(servoT, 180, 90, servoL, 0, 90);
+        else                                                                                                                   // Others
+            moveServos(servoT, 180, 90, servoL, 180, 90);
 
-    // If type is not NULL, generate and show QRCode
-    if (item.type) { generateQRCode(item); }
+        // If type is not NULL, generate and show QRCode
+        if (item->type) { generateQRCode(item); }
 
-    // Delay to let the item fall into the bin before updating leds
-    delay(500);
+        // Delay to let the item fall into the bin before updating leds
+        delay(1000);
 
-    // Update the containers leves
-    for (size_t i = 0; i < CONTAINER_COUNT; i++) {
-        updateLED(i);
+        // Update the containers leves
+        for (size_t i = 0; i < CONTAINER_COUNT; i++) {
+            updateLED(i);
+        }
     }
 }
 
-void generateQRCode(Waste item) {
+void generateQRCode(Waste *item) {
     QRCode qrcode;
     uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
-    String text = "http://" + String(item.host) + ":8081?r=" + String(item.code) + "&l=" + String(item.type); //http://<<IP>>:8081?r=<<Redeem code>>&l=<<Classificacao>>
+    String text = "http://" + String(item->host) + ":8081?r=" + String(item->code) + "&l=" + String(item->type); //http://<<IP>>:8081?r=<<Redeem code>>&l=<<Classificacao>>
     int offset_x = 62;
     int offset_y = 3;
 
@@ -324,11 +340,11 @@ void updateLED(int container) {
 
 void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, int value2) {
     servo1.write(value1);
-    delay(3000);
+    delay(1000);
     servo1.write(base1);
     delay(500);
     servo2.write(value2);
-    delay(3000);
+    delay(1000);
     servo2.write(base2);
     delay(500);
 }
@@ -339,4 +355,24 @@ bool checkSensor() {
         return (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW);
     }
     return false;
+}
+
+void displayMessage(String message) {
+    // Serial.println(message);
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 10);
+    display.println(message);
+    display.display();
+}
+
+String getResponse() {
+    String response = "";
+    String data = Serial3.readString();
+
+    // Messages received are always a JSON, so take from { to }
+    response = data.substring(data.indexOf('{'), data.indexOf('}') + 1);
+    
+    return response;
 }
