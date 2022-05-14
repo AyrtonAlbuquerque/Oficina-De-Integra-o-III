@@ -6,7 +6,7 @@
 #include <qrcode.h>
 #include <ArduinoJson.h>
 #include "MedianFilterLib2.h"
-// #include <avr8-stub.h> // Debugging only
+//#include <avr8-stub.h> // Debugging only
 
 /* -------------------------------------------------------------------------- */
 /*                                   Defines                                  */
@@ -45,10 +45,10 @@
 /*                                    Types                                   */
 /* -------------------------------------------------------------------------- */
 typedef struct waste_t {
-    char* host;
-    char* type;
-    char* code;
-    char* message;
+    char *host;
+    char *type;
+    char *code;
+    char *message;
 } Waste;
 
 typedef struct led_t {
@@ -74,7 +74,7 @@ long start;
 /* -------------------------------------------------------------------------- */
 Adafruit_SSD1306 display(WIDTH, HEIGHT, &Wire, -1);
 
-Waste* parseResponse(String response);
+Waste *parseResponse(String response);
 
 void recycle(Waste *item);
 
@@ -88,12 +88,14 @@ bool checkSensor();
 
 void displayMessage(String message);
 
+String getResponse();
+
 /* -------------------------------------------------------------------------- */
 /*                                    Setup                                   */
 /* -------------------------------------------------------------------------- */
 void setup() {
     // For debuggig only
-    // debug_init();
+//    debug_init();
 
     // Setup system variables
     processing = false;
@@ -117,7 +119,7 @@ void setup() {
     pinMode(TRIGGER3, OUTPUT);
     pinMode(TRIGEGR4, OUTPUT);
     pinMode(TRIGEGR4, OUTPUT);
-    pinMode(LED_TAPE_PIN, OUTPUT); 
+    pinMode(LED_TAPE_PIN, OUTPUT);
 
     // Setup Leds and Led tape
     digitalWrite(LED1_PIN, HIGH);
@@ -128,7 +130,7 @@ void setup() {
 
     // Setup servos
     servoT.attach(SERVOT_PIN);
-    servoR.attach(SERVOR_PIN); 
+    servoR.attach(SERVOR_PIN);
     servoL.attach(SERVOL_PIN);
 
     // Initialial Container setup
@@ -143,8 +145,8 @@ void setup() {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(WHITE);
-    display.setCursor(0, 10);    
-    display.display(); 
+    display.setCursor(0, 10);
+    display.display();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -176,7 +178,7 @@ void loop() {
             if (Serial3.available()) {
                 // Handle the serial message
                 String response = getResponse();
-                
+
                 // If it is a valid response
                 if (response != "") {
                     // Serial.println("Parsing response");
@@ -204,8 +206,8 @@ void loop() {
                     // Parse the response string
                     item = parseResponse(response);
 
-                    // If item type is NULL than its just a message from ESP32
-                    if (!(item->type)) {
+                    // If item type is NULL or empty than its just a message from ESP32
+                    if (String(item->type).equals("") || !(item->type)) {
                         // Display the message in the screen
                         displayMessage(item->message);
                     }
@@ -223,10 +225,8 @@ void loop() {
             digitalWrite(LED_TAPE_PIN, HIGH);
             recycle(item);
             free(item);
-            processing = false;
-
-            // Timeout reached, end processing
             displayMessage("Smart Recycler");
+            processing = false;
         }
     }
     // Serial.println("Loop end");  
@@ -236,12 +236,12 @@ void loop() {
 /* -------------------------------------------------------------------------- */
 /*                                  Functions                                 */
 /* -------------------------------------------------------------------------- */
-Waste* parseResponse(String response) {
+Waste *parseResponse(String response) {
     Waste *item;
     DynamicJsonDocument doc(1024);
     DeserializationError error = deserializeJson(doc, response);
 
-    item = (Waste *)malloc(sizeof(Waste));
+    item = (Waste *) malloc(sizeof(Waste));
 
     // Parse the response to the item structure
     item->type = doc["type"];
@@ -253,15 +253,15 @@ Waste* parseResponse(String response) {
 }
 
 void recycle(Waste *item) {
-    if (item) {
-        // Waste treatment based on type
-        if (strcmp(item->type, "0") && containers.metal == LOW)                                                                // Soda cans
+    if (item->type) {
+        // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
+        if (String(item->type).equals("0") && containers.metal == LOW)
             moveServos(servoT, 0, 90, servoR, 0, 90);
-        else if ((strcmp(item->type, "1") || strcmp(item->type, "2")) && containers.paper == LOW)                              // Juice boxes | Crumpled paper
+        else if ((String(item->type).equals("1") || String(item->type).equals("2")) && containers.paper == LOW)
             moveServos(servoT, 0, 90, servoR, 180, 90);
-        else if ((strcmp(item->type, "3") || strcmp(item->type, "4") || strcmp(item->type, "5")) && containers.plastic == LOW) // Plastic bottles | Plastic cups | Chip bags
+        else if ((String(item->type).equals("3") || String(item->type).equals("4") || String(item->type).equals("5")) && containers.plastic == LOW)
             moveServos(servoT, 180, 90, servoL, 0, 90);
-        else                                                                                                                   // Others
+        else
             moveServos(servoT, 180, 90, servoL, 180, 90);
 
         // If type is not NULL, generate and show QRCode
@@ -280,7 +280,7 @@ void recycle(Waste *item) {
 void generateQRCode(Waste *item) {
     QRCode qrcode;
     uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
-    String text = "http://" + String(item->host) + ":8081?r=" + String(item->code) + "&l=" + String(item->type); //http://<<IP>>:8081?r=<<Redeem code>>&l=<<Classificacao>>
+    String text = "http://" + String(item->host) + ":8081?r=" + String(item->code) + "&l=" + String(item->type);
     int offset_x = 62;
     int offset_y = 3;
 
@@ -328,7 +328,7 @@ void updateLED(int container) {
         distance = duration * 0.034 / 2;
         medianFilter.AddValue(distance);
     }
-    distance=medianFilter.GetFiltered();
+    distance = medianFilter.GetFiltered();
 
     // Update the leds and the containers struct
     containers.metal = (container == 0) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
@@ -370,9 +370,13 @@ void displayMessage(String message) {
 String getResponse() {
     String response = "";
     String data = Serial3.readString();
+    int begin = data.indexOf('{');
+    int end = data.lastIndexOf("}");
 
-    // Messages received are always a JSON, so take from { to }
-    response = data.substring(data.indexOf('{'), data.indexOf('}') + 1);
-    
+    if (begin != -1 && end != -1) {
+        // Messages received are always a JSON, so take from first "{" to last "}"
+        response = data.substring(begin, end + 1);
+    }
+
     return response;
 }
