@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Servo.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <LCDWIKI_GUI.h>
+#include <SSD1283A.h>
 #include <qrcode.h>
 #include <ArduinoJson.h>
 #include "MedianFilterLib2.h"
@@ -29,6 +29,12 @@
 #define TRIGEGR4        28
 #define IR1_PIN         30
 #define IR2_PIN         31
+#define DISPLAY_CS      53
+#define DISPLAY_DC      47
+#define DISPLAY_RESET   48
+#define DISPLAY_LED     43
+#define DISPLAY_SCK     52
+#define DISPLAY_SDA     51
 #define WIDTH           128
 #define HEIGHT          64
 #define BOUD_RATE       115200
@@ -39,7 +45,8 @@
 #define INITIAL_DELAY   2000
 #define QRCODE_VERSION  3
 #define QRCODE_ECC      ECC_LOW
-#define RECYCLER_ID     0
+#define BLACK           0x0000
+#define WHITE           0xFFFF
 
 /* -------------------------------------------------------------------------- */
 /*                                    Types                                   */
@@ -68,11 +75,12 @@ Servo servoR;
 Led containers;
 bool processing;
 long start;
+String current_message = "";
 
 /* -------------------------------------------------------------------------- */
 /*                                Declarations                                */
 /* -------------------------------------------------------------------------- */
-Adafruit_SSD1306 display(WIDTH, HEIGHT, &Wire, -1);
+SSD1283A_GUI display(DISPLAY_CS, DISPLAY_DC, DISPLAY_RESET, DISPLAY_LED);
 
 Waste *parseResponse(String response);
 
@@ -102,7 +110,6 @@ void setup() {
 
     // Setup the serial
     Serial3.begin(BOUD_RATE);
-    // Serial.begin(BOUD_RATE); // Tests only
 
     // Setup pin modes
     pinMode(IR1_PIN, INPUT);
@@ -140,32 +147,25 @@ void setup() {
     containers.other = LOW;
 
     // Setup de display
-    // Serial.println("Initilizing display...");
-    while (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C));
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setCursor(0, 10);
-    display.display();
+    display.init();
+    display.fillScreen(BLACK);
 }
 
 /* -------------------------------------------------------------------------- */
 /*                                    Loop                                    */
 /* -------------------------------------------------------------------------- */
 void loop() {
-    Waste *item;
+    Waste *item = NULL;
 
     // If not processing waste
     if (!processing) {
-        // Serial.println("Checking IR Sensor");
         // If the IR Sensor is active for a minimal duration than start processing
         if (checkSensor()) {
-            // Serial.println("IR Sensor blocked");  
             processing = true;
             start = millis();
 
             // Display processing massage
-            displayMessage("Processing");
+            displayMessage("Processing...");
             // Waste processing begins. wait for a moment
             delay(INITIAL_DELAY);
             // Turn on the Led tape
@@ -173,7 +173,6 @@ void loop() {
             // Notify ESP32 to take a picture and get classification
             Serial3.println(".");
         } else {
-            // Serial.println("Checking for ESP Messages");
             // If not processing, check and display messages from ESP32
             if (Serial3.available()) {
                 // Handle the serial message
@@ -181,21 +180,18 @@ void loop() {
 
                 // If it is a valid response
                 if (response != "") {
-                    // Serial.println("Parsing response");
                     item = parseResponse(response);
                     displayMessage(item->message);
                     free(item);
                 }
             } else {
-                // Serial.println("No messages from ESP, default");
-                displayMessage("Smart Recycler");
+                if (!current_message.equals("Smart Recycler"))
+                    displayMessage("Smart Recycler");
             }
         }
     } else {
-        // Serial.println("Processing started");
         // While processing timeout has not been reached
-        if ((start + PROCESS_TIMEOUT) <= millis()) {
-            // Serial.println("Waiting for ESP response");
+        if ((millis() - start) <= PROCESS_TIMEOUT) {
             // If there is a response from ESP32
             if (Serial3.available()) {
                 // Handle the serial message
@@ -220,7 +216,6 @@ void loop() {
                 }
             }
         } else {
-            // Serial.println("Processing timeout");
             // Turn off led tape and recycle item to others
             digitalWrite(LED_TAPE_PIN, HIGH);
             recycle(item);
@@ -229,7 +224,6 @@ void loop() {
             processing = false;
         }
     }
-    // Serial.println("Loop end");  
     delay(10);
 }
 
@@ -254,6 +248,9 @@ Waste *parseResponse(String response) {
 
 void recycle(Waste *item) {
     if (item->type) {
+        // Generate and show QRCode
+        generateQRCode(item);
+
         // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
         if (String(item->type).equals("0") && containers.metal == LOW)
             moveServos(servoT, 0, 90, servoR, 0, 90);
@@ -263,9 +260,6 @@ void recycle(Waste *item) {
             moveServos(servoT, 180, 90, servoL, 0, 90);
         else
             moveServos(servoT, 180, 90, servoL, 180, 90);
-
-        // If type is not NULL, generate and show QRCode
-        if (item->type) { generateQRCode(item); }
 
         // Delay to let the item fall into the bin before updating leds
         delay(1000);
@@ -279,34 +273,42 @@ void recycle(Waste *item) {
 
 void generateQRCode(Waste *item) {
     QRCode qrcode;
+    int offset_x = 7;
+    int offset_y = 10;
     uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
-    String text = "http://" + String(item->host) + ":8081?r=" + String(item->code) + "&l=" + String(item->type);
-    int offset_x = 62;
-    int offset_y = 3;
+    String url = "http://" + String(item->host) + ":8081?r=" + String(item->code) + "&l=" + String(item->type);
+    String text = (String(item->type).equals("0") ? "METAL" :
+                   (String(item->type).equals("1") || String(item->type).equals("2")) ? "PAPER" :
+                   (String(item->type).equals("3") || String(item->type).equals("4") || String(item->type).equals("5")) ? "PLASTIC" : "OTHER");
 
     // Create the QRCode
-    qrcode_initText(&qrcode, data, QRCODE_VERSION, QRCODE_ECC, text.c_str());
+    qrcode_initText(&qrcode, data, QRCODE_VERSION, QRCODE_ECC, url.c_str());
 
     // Prepare the display
-    display.clearDisplay();
+    display.fillScreen(BLACK);
+    // Print Classification
+    display.Set_Text_colour(WHITE);
+    display.Set_Text_Back_colour(BLACK);
+    display.Set_Text_Size(1);
+    display.Print_String(text, 65 - text.length() * 3, 0);
+    // Print QR Code
     for (int y = 0; y < qrcode.size; y++) {
         for (int x = 0; x < qrcode.size; x++) {
-            int newX = offset_x + (2 * x);
-            int newY = offset_y + (2 * y);
+            int newX = offset_x + (4 * x);
+            int newY = offset_y + (4 * y);
 
             if (qrcode_getModule(&qrcode, x, y)) {
-                display.fillRect(newX, newY, 2, 2, 0);
+                display.fillRect(newX, newY, 4, 4, WHITE);
             } else {
-                display.fillRect(newX, newY, 2, 2, 1);
+                display.fillRect(newX, newY, 4, 4, BLACK);
             }
         }
     }
-    display.setTextColor(1, 0);
-    display.display();
 }
 
 void updateLED(int container) {
-    int trigger = (container == 0) ? TRIGGER1 : ((container == 1) ? TRIGGER2 : ((container == 2) ? TRIGGER3 : TRIGEGR4));
+    int trigger = (container == 0) ? TRIGGER1 : ((container == 1) ? TRIGGER2 : ((container == 2) ? TRIGGER3
+                                                                                                 : TRIGEGR4));
     int echo = (container == 0) ? ECHO1 : ((container == 1) ? ECHO2 : ((container == 2) ? ECHO3 : ECHO4));
     int led = (container == 0) ? LED1_PIN : ((container == 1) ? LED2_PIN : ((container == 2) ? LED3_PIN : LED4_PIN));
     MedianFilter2<int> medianFilter(15);
@@ -358,13 +360,18 @@ bool checkSensor() {
 }
 
 void displayMessage(String message) {
+    int x = 65 - message.length() * 3;
+
+    // If x possition on display is less than 0, than set to 0
+    x = (x < 0) ? 0 : x;
+
     // Serial.println(message);
-    display.clearDisplay();
-    display.setTextSize(2);
-    display.setTextColor(WHITE);
-    display.setCursor(0, 10);
-    display.println(message);
-    display.display();
+    display.fillScreen(BLACK);
+    display.Set_Text_colour(WHITE);
+    display.Set_Text_Back_colour(BLACK);
+    display.Set_Text_Size(1);
+    display.Print_String(message, x, 58);
+    current_message = message;
 }
 
 String getResponse() {
