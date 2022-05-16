@@ -7,20 +7,20 @@
 /* -------------------------------------------------------------------------- */
 /*                                   Defines                                  */
 /* -------------------------------------------------------------------------- */
-#define WIDTH       640
-#define HEIGHT      480
+#define WIDTH       1024
+#define HEIGHT      768
 #define QUALITY     95
 #define BOUD_RATE   115200
 
 /* -------------------------------------------------------------------------- */
 /*                                   Globals                                  */
 /* -------------------------------------------------------------------------- */
-const char *ssid = "Ayrton_2G";
-const char *password = "Ayrton297866*";
-const String url = "http://198.167.0.1/classification/request";
-const String host = "198.167.0.1";
-const int port = 80;
-const String recyclerID = "0";
+const char *ssid = "Zhone_7E83";
+const char *password = "znid309666179";
+const String url = "http://192.168.1.13:8081/classifications/request";
+const String host = "192.168.1.13";
+const int port = 8081;
+const String recyclerID = "1";
 int status = WL_IDLE_STATUS;
 String bound = "boundry";
 
@@ -69,6 +69,10 @@ void loop() {
 
             // Take a picture
             frame = esp_camera_fb_get();
+            esp_camera_fb_return(frame);
+            frame = esp_camera_fb_get();
+            esp_camera_fb_return(frame);
+            frame = esp_camera_fb_get();
             if (!frame) {
                 sendResponse("Failed to capture image");
             } else {
@@ -79,13 +83,15 @@ void loop() {
                     // Send request to server and get response
                     sendImage(frame, client);
                     // Send response to Arduino
-                    sendResponse(client.readStringUntil('\r'));
+                    // sendResponse(client.readStringUntil('\r'));
+                    sendResponse(client.readString());
                     // End the client connection
                     client.stop();
                 }
-                // Return the frame buffer to be reused again
-                esp_camera_fb_return(frame);
             }
+            // Return the frame buffer to be reused again
+            esp_camera_fb_return(frame);
+            frame = NULL;
         }
     } else {
         connectWiFi();
@@ -147,13 +153,22 @@ void writeClient(camera_fb_t *frame, WiFiClient client) {
 void sendResponse(String message) {
     DynamicJsonDocument doc(1024);
     DynamicJsonDocument response(1024);
-    DeserializationError error = deserializeJson(doc, message);
+    int begin = message.indexOf("{");
+    int end = message.lastIndexOf("}");
 
     // Build the final response
-    response["host"] = host;
-    response["code"] = doc["redeem_code"];
-    response["type"] = doc["class"];
-    response["message"] = error ? message : doc["message"];
+    if (begin != -1 && end != -1) {
+        DeserializationError error = deserializeJson(doc, message.substring(begin, end + 1));
+        response["host"] = host;
+        response["code"] = doc["redeem_code"];
+        response["type"] = doc["class"];
+        response["message"] = error ? message : doc["message"];
+    } else {
+        response["host"] = host;
+        response["code"] = doc["redeem_code"];
+        response["type"] = doc["class"];
+        response["message"] = message;
+    }
 
     // Send response
     serializeJson(response, Serial);
