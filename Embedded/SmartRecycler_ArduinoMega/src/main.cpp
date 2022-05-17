@@ -75,7 +75,7 @@ Servo servoR;
 Led containers;
 bool processing;
 long start;
-String current_message = "";
+String current_message;
 
 /* -------------------------------------------------------------------------- */
 /*                                Declarations                                */
@@ -107,6 +107,7 @@ void setup() {
 
     // Setup system variables
     processing = false;
+    current_message = "";
 
     // Setup the serial
     Serial3.begin(BOUD_RATE);
@@ -206,13 +207,13 @@ void loop() {
                     if (String(item->type).equals("") || !(item->type)) {
                         // Display the message in the screen
                         displayMessage(item->message);
+                    } else {
+                        // Turn off led tape and recycle item
+                        digitalWrite(LED_TAPE_PIN, HIGH);
+                        recycle(item);
+                        processing = false;
                     }
-
-                    // Turn off led tape and recycle item
-                    digitalWrite(LED_TAPE_PIN, HIGH);
-                    recycle(item);
                     free(item);
-                    processing = false;
                 }
             }
         } else {
@@ -247,7 +248,7 @@ Waste *parseResponse(String response) {
 }
 
 void recycle(Waste *item) {
-    if (item->type) {
+    if (item) {
         // Generate and show QRCode
         generateQRCode(item);
 
@@ -307,8 +308,7 @@ void generateQRCode(Waste *item) {
 }
 
 void updateLED(int container) {
-    int trigger = (container == 0) ? TRIGGER1 : ((container == 1) ? TRIGGER2 : ((container == 2) ? TRIGGER3
-                                                                                                 : TRIGEGR4));
+    int trigger = (container == 0) ? TRIGGER1 : ((container == 1) ? TRIGGER2 : ((container == 2) ? TRIGGER3 : TRIGEGR4));
     int echo = (container == 0) ? ECHO1 : ((container == 1) ? ECHO2 : ((container == 2) ? ECHO3 : ECHO4));
     int led = (container == 0) ? LED1_PIN : ((container == 1) ? LED2_PIN : ((container == 2) ? LED3_PIN : LED4_PIN));
     MedianFilter2<int> medianFilter(15);
