@@ -76,18 +76,8 @@ void loop() {
             if (!frame) {
                 sendResponse("Failed to capture image");
             } else {
-                // Begin connection with the server
-                if (!client.connect(host.c_str(), port)) {
-                    sendResponse("Connection to the server failed!");
-                } else {
-                    // Send request to server and get response
-                    sendImage(frame, client);
-                    // Send response to Arduino
-                    // sendResponse(client.readStringUntil('\r'));
-                    sendResponse(client.readString());
-                    // End the client connection
-                    client.stop();
-                }
+                // Integration test
+                sendResponse("{\"host\":\"" + host + "\",\"type\":\"" + String(rand() % 5) + "\",\"code\":\"sdjacbdert123dswedfeecf\",\"message\":\"Test message\"}");
             }
             // Return the frame buffer to be reused again
             esp_camera_fb_return(frame);

@@ -37,7 +37,7 @@
 #define DISPLAY_SDA     51
 #define WIDTH           128
 #define HEIGHT          64
-#define BOUD_RATE       115200
+#define BAUD_RATE       115200
 #define PROCESS_TIMEOUT 15000
 #define CONTAINER_COUNT 4
 #define CONTAINER_FULL  10
@@ -110,7 +110,7 @@ void setup() {
     current_message = "";
 
     // Setup the serial
-    Serial3.begin(BOUD_RATE);
+    Serial3.begin(BAUD_RATE);
 
     // Setup pin modes
     pinMode(IR1_PIN, INPUT);
