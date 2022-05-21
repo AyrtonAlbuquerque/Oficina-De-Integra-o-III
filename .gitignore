@@ -7,3 +7,11 @@ Backend/backend-api/data/
 
 Inference/neural_network_resnet/dataset/
 Inference/neural_network_resnet/models/
+
+Embedded/GoogleDrive/SmartRecycler_ESP32_GoogleDrive/build/
+
+Embedded/SmartRecycler_ESP32/build/
+
+Embedded/SmartRecycler_ESP32_V2/build/
+
+Embedded/GoogleDrive/SmartRecycler_ESP32_GoogleDrive/.vscode/
