@@ -3,7 +3,10 @@ Embedded/SmartRecycler_ArduinoMega/.vscode/
 
 Embedded/SmartRecycler_ArduinoMega/build/
 
+Backend/backend-api/data/
+
 Inference/neural_network_resnet/dataset/
+Inference/neural_network_resnet/models/
 
 Embedded/GoogleDrive/SmartRecycler_ESP32_GoogleDrive/build/
 

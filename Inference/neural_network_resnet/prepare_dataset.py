@@ -2,7 +2,6 @@ import os
 from os.path import join
 import pathlib
 import shutil
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import random
 from config import INPUT_DIR, OUTPUT_DIR, PERCENTAGE_TEST, PERCENTAGE_VALIDATE, SHUFFLE, CLASSES
 

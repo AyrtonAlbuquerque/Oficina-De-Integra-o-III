@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import os
-from config import CLASSES, BATCH_SIZE, EPOCHS, INPUT_SHAPE, INPUT_DIR, OUTPUT_DIR, LEARNING_RATE, ACTIVATION
+from config import CLASSES, BATCH_SIZE, EPOCHS, INPUT_SHAPE, OUTPUT_DIR, LEARNING_RATE, ACTIVATION
 
 def plot_hist(hist, model):
     plt.plot(hist.history["loss"])
@@ -64,24 +64,11 @@ def main():
     class_names=CLASSES,
     batch_size=BATCH_SIZE,
     shuffle=True,
-  ) 
-
-  # imgaug
-  # run aug before running code
-  img_augmentation = Sequential([
-      layers.RandomRotation(factor=0.5),
-      layers.RandomTranslation(height_factor=0.1, width_factor=0.1),
-      layers.RandomFlip(),
-      layers.RandomContrast(factor=0.1), # check value
-      # blur
-      # noise (gaussian, salt and pepper)
-    ],
-    name='img_augmentation',
   )
 
   inputs = layers.Input(shape=(INPUT_SHAPE[0], INPUT_SHAPE[1], 3))
-  x = img_augmentation(inputs)
-  model = ResNet50V2(weights="imagenet", include_top=False, input_tensor=x)
+  # x = img_augmentation(inputs)
+  model = ResNet50V2(weights="imagenet", include_top=False, input_tensor=inputs)
   model.trainable = False
 
   # Rebuild top
