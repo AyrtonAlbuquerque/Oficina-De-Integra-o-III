@@ -251,12 +251,12 @@ Waste *parseResponse(String response) {
 
 void recycle(Waste *item) {
     String host = String(item->host);
-    String code = String(item->code); 
+    String code = String(item->code);
     String type = String(item->type);
 
     // Generate and show QRCode
     generateQRCode(host, code, type);
-    
+
     // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
     if (type.equals("0") && containers.metal == LOW)
         moveServos(servoT, 85, 10, servoR, 90, 5);
