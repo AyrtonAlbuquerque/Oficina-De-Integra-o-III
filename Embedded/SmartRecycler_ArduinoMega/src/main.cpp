@@ -15,28 +15,25 @@
 #define ECHO2           3
 #define ECHO3           4
 #define ECHO4           5
-#define SERVOT_PIN      8
+#define SERVOT_PIN      10
 #define SERVOL_PIN      9
-#define SERVOR_PIN      10
-#define LED_TAPE_PIN    12
-#define LED1_PIN        23
-#define LED2_PIN        25
-#define LED3_PIN        27
-#define LED4_PIN        29
-#define TRIGGER1        22
-#define TRIGGER2        24
-#define TRIGGER3        26
-#define TRIGEGR4        28
-#define IR1_PIN         30
-#define IR2_PIN         31
+#define SERVOR_PIN      8
+#define LED_TAPE_PIN    34
+#define LED1_PIN        32
+#define LED2_PIN        30
+#define LED3_PIN        28
+#define LED4_PIN        26
+#define TRIGGER1        48
+#define TRIGGER2        46
+#define TRIGGER3        44
+#define TRIGEGR4        42
+#define IR_PIN          24
 #define DISPLAY_CS      53
-#define DISPLAY_DC      47
-#define DISPLAY_RESET   48
-#define DISPLAY_LED     43
+#define DISPLAY_DC      38
+#define DISPLAY_RESET   40
+#define DISPLAY_LED     36
 #define DISPLAY_SCK     52
 #define DISPLAY_SDA     51
-#define WIDTH           128
-#define HEIGHT          64
 #define BAUD_RATE       115200
 #define PROCESS_TIMEOUT 15000
 #define CONTAINER_COUNT 4
@@ -86,11 +83,13 @@ Waste *parseResponse(String response);
 
 void recycle(Waste *item);
 
-void generateQRCode(Waste *item);
+void generateQRCode(String host, String code, String type);
 
 void updateLED(int container);
 
 void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, int value2);
+
+void sweepServo(Servo servo, int value);
 
 bool checkSensor();
 
@@ -113,8 +112,7 @@ void setup() {
     Serial3.begin(BAUD_RATE);
 
     // Setup pin modes
-    pinMode(IR1_PIN, INPUT);
-    pinMode(IR2_PIN, INPUT);
+    pinMode(IR_PIN, INPUT);
     pinMode(ECHO1, INPUT);
     pinMode(ECHO2, INPUT);
     pinMode(ECHO3, INPUT);
@@ -140,14 +138,17 @@ void setup() {
     servoT.attach(SERVOT_PIN);
     servoR.attach(SERVOR_PIN);
     servoL.attach(SERVOL_PIN);
+    sweepServo(servoT, 85);
+    sweepServo(servoL, 90);
+    sweepServo(servoR, 90);
 
-    // Initialial Container setup
+    // Container setup
     containers.metal = LOW;
     containers.plastic = LOW;
     containers.paper = LOW;
     containers.other = LOW;
 
-    // Setup de display
+    // Display setup
     display.init();
     display.fillScreen(BLACK);
 }
@@ -186,8 +187,7 @@ void loop() {
                     free(item);
                 }
             } else {
-                if (!current_message.equals("Smart Recycler"))
-                    displayMessage("Smart Recycler");
+                displayMessage("Smart Recycler");
             }
         }
     } else {
@@ -219,8 +219,10 @@ void loop() {
         } else {
             // Turn off led tape and recycle item to others
             digitalWrite(LED_TAPE_PIN, HIGH);
-            recycle(item);
-            free(item);
+            if (item) {
+                recycle(item);
+                free(item);
+            }
             displayMessage("Smart Recycler");
             processing = false;
         }
@@ -234,7 +236,7 @@ void loop() {
 Waste *parseResponse(String response) {
     Waste *item;
     DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, response);
+    deserializeJson(doc, response);
 
     item = (Waste *) malloc(sizeof(Waste));
 
@@ -248,39 +250,39 @@ Waste *parseResponse(String response) {
 }
 
 void recycle(Waste *item) {
-    if (item) {
-        // Generate and show QRCode
-        generateQRCode(item);
+    String host = String(item->host);
+    String code = String(item->code); 
+    String type = String(item->type);
 
-        // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
-        if (String(item->type).equals("0") && containers.metal == LOW)
-            moveServos(servoT, 0, 90, servoR, 0, 90);
-        else if ((String(item->type).equals("1") || String(item->type).equals("2")) && containers.paper == LOW)
-            moveServos(servoT, 0, 90, servoR, 180, 90);
-        else if ((String(item->type).equals("3") || String(item->type).equals("4") || String(item->type).equals("5")) && containers.plastic == LOW)
-            moveServos(servoT, 180, 90, servoL, 0, 90);
-        else
-            moveServos(servoT, 180, 90, servoL, 180, 90);
+    // Generate and show QRCode
+    generateQRCode(host, code, type);
+    
+    // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
+    if (type.equals("0") && containers.metal == LOW)
+        moveServos(servoT, 85, 10, servoR, 90, 5);
+    else if ((type.equals("1") || type.equals("2")) && containers.paper == LOW)
+        moveServos(servoT, 85, 10, servoR, 90, 175);
+    else if ((type.equals("3") || type.equals("4") || type.equals("5")) && containers.plastic == LOW)
+        moveServos(servoT, 85, 170, servoL, 90, 175);
+    else
+        moveServos(servoT, 85, 170, servoL, 90, 175);
 
-        // Delay to let the item fall into the bin before updating leds
-        delay(1000);
-
-        // Update the containers leves
-        for (size_t i = 0; i < CONTAINER_COUNT; i++) {
-            updateLED(i);
-        }
+    // Update the containers leves
+    for (size_t i = 0; i < CONTAINER_COUNT; i++) {
+        updateLED(i);
     }
+
 }
 
-void generateQRCode(Waste *item) {
+void generateQRCode(String host, String code, String type) {
     QRCode qrcode;
     int offset_x = 7;
     int offset_y = 10;
     uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
-    String url = "http://" + String(item->host) + ":8081?r=" + String(item->code) + "&l=" + String(item->type);
-    String text = (String(item->type).equals("0") ? "METAL" :
-                   (String(item->type).equals("1") || String(item->type).equals("2")) ? "PAPER" :
-                   (String(item->type).equals("3") || String(item->type).equals("4") || String(item->type).equals("5")) ? "PLASTIC" : "OTHER");
+    String url = "http://" + host + ":8081?r=" + code + "&l=" + type;
+    String text = (type.equals("0") ? "METAL" :
+                  (type.equals("1") || type.equals("2")) ? "PAPER" :
+                  (type.equals("3") || type.equals("4") || type.equals("5")) ? "PLASTIC" : "OTHER");
 
     // Create the QRCode
     qrcode_initText(&qrcode, data, QRCODE_VERSION, QRCODE_ECC, url.c_str());
@@ -341,20 +343,36 @@ void updateLED(int container) {
 }
 
 void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, int value2) {
-    servo1.write(value1);
+    sweepServo(servo1, value1);
     delay(1000);
-    servo1.write(base1);
-    delay(500);
-    servo2.write(value2);
+    sweepServo(servo1, base1);
+    sweepServo(servo2, value2);
     delay(1000);
-    servo2.write(base2);
-    delay(500);
+    sweepServo(servo2, base2);
+}
+
+void sweepServo(Servo servo, int value) {
+    int current = servo.read();
+
+    if (current != value) {
+        if (current > value) {
+            for (int i = current; i <= value; i -= 1) {
+                servo.write(i);
+                delay(25);
+            }
+        } else {
+            for (int i = current; i >= value; i += 1) {
+                servo.write(i);
+                delay(25);
+            }
+        }
+    }
 }
 
 bool checkSensor() {
-    if (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW) {
+    if (digitalRead(IR_PIN) == LOW) {
         delay(IR_TIME);
-        return (digitalRead(IR1_PIN) == LOW && digitalRead(IR2_PIN) == LOW);
+        return (digitalRead(IR_PIN) == LOW);
     }
     return false;
 }
@@ -365,13 +383,14 @@ void displayMessage(String message) {
     // If x possition on display is less than 0, than set to 0
     x = (x < 0) ? 0 : x;
 
-    // Serial.println(message);
-    display.fillScreen(BLACK);
-    display.Set_Text_colour(WHITE);
-    display.Set_Text_Back_colour(BLACK);
-    display.Set_Text_Size(1);
-    display.Print_String(message, x, 58);
-    current_message = message;
+    if (!current_message.equals(message)) {
+        display.fillScreen(BLACK);
+        display.Set_Text_colour(WHITE);
+        display.Set_Text_Back_colour(BLACK);
+        display.Set_Text_Size(1);
+        display.Print_String(message, x, 58);
+        current_message = message;
+    }
 }
 
 String getResponse() {
