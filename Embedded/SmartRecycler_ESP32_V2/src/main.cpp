@@ -10,7 +10,7 @@
 #define WIDTH       1024
 #define HEIGHT      768
 #define QUALITY     95
-#define BAUD_RATE   115200
+#define BAUD_RATE   9600
 #define TIMEOUT     10000
 
 /* -------------------------------------------------------------------------- */

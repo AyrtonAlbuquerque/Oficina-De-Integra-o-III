@@ -34,11 +34,11 @@
 #define DISPLAY_LED     36
 #define DISPLAY_SCK     52
 #define DISPLAY_SDA     51
-#define BAUD_RATE       115200
+#define BAUD_RATE       9600
 #define PROCESS_TIMEOUT 15000
 #define CONTAINER_COUNT 4
 #define CONTAINER_FULL  10
-#define IR_TIME         1000
+#define IR_TIME         300
 #define INITIAL_DELAY   2000
 #define QRCODE_VERSION  3
 #define QRCODE_ECC      ECC_LOW
@@ -151,6 +151,7 @@ void setup() {
     // Display setup
     display.init();
     display.fillScreen(BLACK);
+    displayMessage("Ready");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -177,6 +178,7 @@ void loop() {
         } else {
             // If not processing, check and display messages from ESP32
             if (Serial3.available()) {
+                delay(5);
                 // Handle the serial message
                 String response = getResponse();
 
@@ -186,8 +188,6 @@ void loop() {
                     displayMessage(item->message);
                     free(item);
                 }
-            } else {
-                displayMessage("Smart Recycler");
             }
         }
     } else {
@@ -223,7 +223,7 @@ void loop() {
                 recycle(item);
                 free(item);
             }
-            displayMessage("Smart Recycler");
+            displayMessage("Ready");
             processing = false;
         }
     }
@@ -258,20 +258,22 @@ void recycle(Waste *item) {
     generateQRCode(host, code, type);
 
     // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
-    if (type.equals("0") && containers.metal == LOW)
-        moveServos(servoT, 85, 10, servoR, 90, 5);
+    if (type == "0" && containers.metal == LOW)
+        moveServos(servoT, 85, 10, servoR, 90, 10);
     else if ((type.equals("1") || type.equals("2")) && containers.paper == LOW)
-        moveServos(servoT, 85, 10, servoR, 90, 175);
+        moveServos(servoT, 85, 10, servoR, 90, 170);
     else if ((type.equals("3") || type.equals("4") || type.equals("5")) && containers.plastic == LOW)
-        moveServos(servoT, 85, 170, servoL, 90, 175);
+        moveServos(servoT, 85, 170, servoL, 90, 10);
     else
-        moveServos(servoT, 85, 170, servoL, 90, 175);
+        moveServos(servoT, 85, 170, servoL, 90, 170);
 
     // Update the containers leves
     for (size_t i = 0; i < CONTAINER_COUNT; i++) {
         updateLED(i);
     }
 
+    // Processing finished
+    displayMessage("Ready");
 }
 
 void generateQRCode(String host, String code, String type) {
@@ -317,12 +319,12 @@ void updateLED(int container) {
     long duration;
     int distance;
 
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < 10; i++) {
         // Clears the trigger pin condition and sets the trigger pin to HIGH (active) for 10 microseconds
         digitalWrite(trigger, LOW);
-        delayMicroseconds(2);
+        delay(2);
         digitalWrite(trigger, HIGH);
-        delayMicroseconds(10);
+        delay(10);
         digitalWrite(trigger, LOW);
 
         // Reads the echo pin and returns the sound wave travel time in microseconds
@@ -331,39 +333,39 @@ void updateLED(int container) {
         // Calculating the distance. Speed of sound wave divided by 2 (go and back)
         distance = duration * 0.034 / 2;
         medianFilter.AddValue(distance);
+        delay(50);
     }
     distance = medianFilter.GetFiltered();
 
     // Update the leds and the containers struct
-    containers.metal = (container == 0) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
-    containers.paper = (container == 1) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.paper;
-    containers.metal = (container == 2) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
-    containers.metal = (container == 3) ? ((distance < CONTAINER_FULL) ? LOW : HIGH) : containers.metal;
+    containers.metal = (container == 0) ? ((distance < CONTAINER_FULL) ? HIGH : LOW) : containers.metal;
+    containers.paper = (container == 1) ? ((distance < CONTAINER_FULL) ? HIGH : LOW) : containers.paper;
+    containers.plastic = (container == 2) ? ((distance < CONTAINER_FULL) ? HIGH : LOW) : containers.plastic;
+    containers.other = (container == 3) ? ((distance < CONTAINER_FULL) ? HIGH : LOW) : containers.other;
     digitalWrite(led, ((distance < CONTAINER_FULL) ? LOW : HIGH));
 }
 
 void moveServos(Servo servo1, int base1, int value1, Servo servo2, int base2, int value2) {
     sweepServo(servo1, value1);
-    delay(1000);
+    delay(3000);
     sweepServo(servo1, base1);
     sweepServo(servo2, value2);
-    delay(1000);
+    delay(3000);
     sweepServo(servo2, base2);
 }
 
 void sweepServo(Servo servo, int value) {
     int current = servo.read();
-
     if (current != value) {
         if (current > value) {
-            for (int i = current; i <= value; i -= 1) {
+            for (int i = current; i >= value; i -= 2) {
                 servo.write(i);
-                delay(25);
+                delay(20);
             }
         } else {
-            for (int i = current; i >= value; i += 1) {
+            for (int i = current; i <= value; i += 2) {
                 servo.write(i);
-                delay(25);
+                delay(20);
             }
         }
     }
@@ -388,8 +390,10 @@ void displayMessage(String message) {
         display.Set_Text_colour(WHITE);
         display.Set_Text_Back_colour(BLACK);
         display.Set_Text_Size(1);
+        display.Print_String("SMART RECYCLER", 23, 0);
         display.Print_String(message, x, 58);
         current_message = message;
+        Serial.println(message);
     }
 }
 
