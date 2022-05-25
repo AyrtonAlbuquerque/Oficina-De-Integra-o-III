@@ -258,7 +258,7 @@ void recycle(Waste *item) {
     generateQRCode(host, code, type);
 
     // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
-    if (type == "0" && containers.metal == LOW)
+    if (type.equals("0") && containers.metal == LOW)
         moveServos(servoT, 85, 10, servoR, 90, 10);
     else if ((type.equals("1") || type.equals("2")) && containers.paper == LOW)
         moveServos(servoT, 85, 10, servoR, 90, 170);
