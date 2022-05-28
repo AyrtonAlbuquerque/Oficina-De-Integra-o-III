@@ -92,9 +92,11 @@ void loop() {
                         // Send response to Arduino
                         sendResponse(client.readString());
                         // End the client connection
-                        client.stop();
                         esp_camera_fb_return(frame);
-                        break;
+                        if (ok) {
+                            client.stop();
+                            break;
+                        }
                     }
                 }
                 esp_camera_fb_return(frame);

@@ -50,7 +50,7 @@
 /* -------------------------------------------------------------------------- */
 typedef struct waste_t {
     char *host;
-    char *type;
+    int type;
     char *code;
     char *message;
 } Waste;
@@ -110,6 +110,7 @@ void setup() {
 
     // Setup the serial
     Serial3.begin(BAUD_RATE);
+    Serial.begin(BAUD_RATE);
 
     // Setup pin modes
     pinMode(IR_PIN, INPUT);
@@ -195,6 +196,7 @@ void loop() {
         if ((millis() - start) <= PROCESS_TIMEOUT) {
             // If there is a response from ESP32
             if (Serial3.available()) {
+                delay(5);
                 // Handle the serial message
                 String response = getResponse();
 
@@ -206,7 +208,10 @@ void loop() {
                     // If item type is NULL or empty than its just a message from ESP32
                     if (String(item->type).equals("") || !(item->type)) {
                         // Display the message in the screen
-                        displayMessage(item->message);
+                        if (!item->message)
+                            displayMessage("ESP Message error");
+                        else
+                            displayMessage(item->message);
                     } else {
                         // Turn off led tape and recycle item
                         digitalWrite(LED_TAPE_PIN, HIGH);
@@ -219,10 +224,8 @@ void loop() {
         } else {
             // Turn off led tape and recycle item to others
             digitalWrite(LED_TAPE_PIN, HIGH);
-            if (item) {
-                recycle(item);
-                free(item);
-            }
+            recycle(item);
+            free(item);
             displayMessage("Ready");
             processing = false;
         }
@@ -238,6 +241,7 @@ Waste *parseResponse(String response) {
     DynamicJsonDocument doc(1024);
     deserializeJson(doc, response);
 
+    // Allocate new item
     item = (Waste *) malloc(sizeof(Waste));
 
     // Parse the response to the item structure
@@ -250,22 +254,29 @@ Waste *parseResponse(String response) {
 }
 
 void recycle(Waste *item) {
-    String host = String(item->host);
-    String code = String(item->code);
-    String type = String(item->type);
+    String host, code, type;
 
-    // Generate and show QRCode
-    generateQRCode(host, code, type);
+    // If item is not null
+    if (item) {
+        host = String(item->host);
+        code = String(item->code);
+        type = String(item->type);
 
-    // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
-    if (type.equals("0") && containers.metal == LOW)
-        moveServos(servoT, 85, 10, servoR, 90, 10);
-    else if ((type.equals("1") || type.equals("2")) && containers.paper == LOW)
-        moveServos(servoT, 85, 10, servoR, 90, 170);
-    else if ((type.equals("3") || type.equals("4") || type.equals("5")) && containers.plastic == LOW)
-        moveServos(servoT, 85, 170, servoL, 90, 10);
-    else
-        moveServos(servoT, 85, 170, servoL, 90, 170);
+        // Generate and show QRCode
+        generateQRCode(host, code, type);
+
+        // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
+        if (type.equals("0") && containers.metal == LOW)
+            moveServos(servoT, 85, 25, servoR, 90, 10);
+        else if ((type.equals("1") || type.equals("2")) && containers.paper == LOW)
+            moveServos(servoT, 85, 25, servoR, 90, 170);
+        else if ((type.equals("3") || type.equals("4") || type.equals("5")) && containers.plastic == LOW)
+            moveServos(servoT, 85, 155, servoL, 90, 10);
+        else
+            moveServos(servoT, 85, 155, servoL, 90, 170);
+    } else {
+        moveServos(servoT, 85, 155, servoL, 90, 170);
+    }
 
     // Update the containers leves
     for (size_t i = 0; i < CONTAINER_COUNT; i++) {
@@ -273,7 +284,7 @@ void recycle(Waste *item) {
     }
 
     // Processing finished
-    displayMessage("Ready");
+    display.Print_String("SMART RECYCLER:Ready", 7, 0);
 }
 
 void generateQRCode(String host, String code, String type) {
@@ -285,6 +296,7 @@ void generateQRCode(String host, String code, String type) {
     String text = (type.equals("0") ? "METAL" :
                   (type.equals("1") || type.equals("2")) ? "PAPER" :
                   (type.equals("3") || type.equals("4") || type.equals("5")) ? "PLASTIC" : "OTHER");
+    Serial.println("URL: " + url);
 
     // Create the QRCode
     qrcode_initText(&qrcode, data, QRCODE_VERSION, QRCODE_ECC, url.c_str());
@@ -385,16 +397,14 @@ void displayMessage(String message) {
     // If x possition on display is less than 0, than set to 0
     x = (x < 0) ? 0 : x;
 
-    if (!current_message.equals(message)) {
-        display.fillScreen(BLACK);
-        display.Set_Text_colour(WHITE);
-        display.Set_Text_Back_colour(BLACK);
-        display.Set_Text_Size(1);
-        display.Print_String("SMART RECYCLER", 23, 0);
-        display.Print_String(message, x, 58);
-        current_message = message;
-        Serial.println(message);
-    }
+    display.fillScreen(BLACK);
+    display.Set_Text_colour(WHITE);
+    display.Set_Text_Back_colour(BLACK);
+    display.Set_Text_Size(1);
+    display.Print_String("SMART RECYCLER", 23, 0);
+    display.Print_String(message, x, 58);
+    current_message = message;
+    Serial.println(message);
 }
 
 String getResponse() {
@@ -406,6 +416,7 @@ String getResponse() {
     if (begin != -1 && end != -1) {
         // Messages received are always a JSON, so take from first "{" to last "}"
         response = data.substring(begin, end + 1);
+        Serial.println("Esp Response: " + response);
     }
 
     return response;
