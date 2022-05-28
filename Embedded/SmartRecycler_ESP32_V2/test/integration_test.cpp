@@ -10,21 +10,19 @@
 #define WIDTH       1024
 #define HEIGHT      768
 #define QUALITY     95
-#define BAUD_RATE   9600
-#define TIMEOUT     10000
+#define BAUD_RATE   115200
 
 /* -------------------------------------------------------------------------- */
 /*                                   Globals                                  */
 /* -------------------------------------------------------------------------- */
 const char *ssid = "AndroidAP";
 const char *password = "gisi6622";
-const String url = "http://192.168.0.239:8081/classifications/request";
-const String host = "192.168.0.239";
+const String url = "http://192.168.1.166:8081/classifications/request";
+const String host = "192.168.1.166";
 const int port = 8081;
 const String recyclerID = "1";
 int status = WL_IDLE_STATUS;
 String bound = "boundry";
-bool ok = false;
 
 /* -------------------------------------------------------------------------- */
 /*                                Declarations                                */
@@ -54,14 +52,13 @@ void setup() {
         cfg.setJpeg(QUALITY);
 
         // Initialize the camera
-        sendResponse(Camera.begin(cfg) ? "Camera initialized" : "Camera initialization\nfailed");
+        sendResponse(Camera.begin(cfg) ? "Camera initialized" : "Camera initialization failed");
     }
 }
 
 void loop() {
     camera_fb_t *frame = NULL;
     WiFiClient client;
-    long start;
 
     // If connected to WiFi
     if (WiFi.status() == WL_CONNECTED) {
@@ -69,36 +66,22 @@ void loop() {
         if (Serial.available()) {
             // Clear the Serial buffer
             Serial.readString();
-            // Save start time
-            start = millis();
-            ok = false;
-            // While not timed out
-            while ((millis() - start) < TIMEOUT && !ok) {
-                // Take a picture
-                frame = esp_camera_fb_get();
-                esp_camera_fb_return(frame);
-                frame = esp_camera_fb_get();
-                esp_camera_fb_return(frame);
-                frame = esp_camera_fb_get();
-                if (!frame) {
-                    sendResponse("Failed to capture\nimage");
-                } else {
-                    // Begin connection with the server
-                    if (!client.connect(host.c_str(), port)) {
-                        sendResponse("Connection to the\nserver failed!");
-                    } else {
-                        // Send request to server and get response
-                        sendImage(frame, client);
-                        // Send response to Arduino
-                        sendResponse(client.readString());
-                        // End the client connection
-                        client.stop();
-                        esp_camera_fb_return(frame);
-                        break;
-                    }
-                }
-                esp_camera_fb_return(frame);
+
+            // Take a picture
+            frame = esp_camera_fb_get();
+            esp_camera_fb_return(frame);
+            frame = esp_camera_fb_get();
+            esp_camera_fb_return(frame);
+            frame = esp_camera_fb_get();
+            if (!frame) {
+                sendResponse("Failed to capture image");
+            } else {
+                // Integration test
+                sendResponse("{\"host\":\"" + host + "\",\"type\":\"" + String(rand() % 5) + "\",\"code\":\"sdjacbdert123dswedfeecf\",\"message\":\"Test message\"}");
             }
+            // Return the frame buffer to be reused again
+            esp_camera_fb_return(frame);
+            frame = NULL;
         }
     } else {
         connectWiFi();
@@ -118,9 +101,6 @@ void connectWiFi() {
 
     // While not connected keep trying until a connection is established
     while (WiFi.status() != WL_CONNECTED) { delay(500); }
-
-    // Connected
-    sendResponse("Connected");
 }
 
 void sendImage(camera_fb_t *frame, WiFiClient client) {
@@ -179,9 +159,6 @@ void sendResponse(String message) {
         response["type"] = doc["class"];
         response["message"] = message;
     }
-
-    // Set the ok flag
-    ok = (message.indexOf("HTTP/1.1 200 OK") != -1);
 
     // Send response
     serializeJson(response, Serial);
