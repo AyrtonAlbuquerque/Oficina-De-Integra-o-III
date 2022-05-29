@@ -5,7 +5,7 @@ import numpy as np
 import time
 import os
 from os.path import join
-from src.config import MODEL_PATH, PREDICTION_THRESHOLD, INPUT_SHAPE
+from src.config import MODEL_PATH, PREDICTION_THRESHOLD, INPUT_SHAPE, CLASSES
 
 
 def load_image(img_path):
@@ -23,24 +23,13 @@ def decode_predictions(predictions):
     return np.where(predictions == max_confidence_prediction)[0][0].item()
   return -1
 
-  for index, pred in enumerate(prediction):
-    if pred >= PREDICTION_THRESHOLD:
-      possible.append({
-        'index': index,
-        'confidence': pred
-      })
-  if len(possible):
-    return max(possible, key = lambda k: square['confidence'])['index']
-
 
 # load model
 model = load_model(MODEL_PATH)
 
 def classify(image_path):
-  print('image_path', image_path)
   image = load_image(image_path)
   prediction = model.predict(image)
-  print('prediction', prediction)
   classification = decode_predictions(prediction[0])
-  print('classification', classification)
+  print('Classified as:', CLASSES[classification] if classification >= 0 else 'other')
   return classification

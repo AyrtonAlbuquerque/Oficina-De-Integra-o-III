@@ -23,6 +23,7 @@ def classificationRequest():
             'redeem_code': redeem_code,
             'image_path': image_path
         }
+        print('classification', classification)
         ClassificationDAO.create(classification)
     except Exception as err:
         print('Exception:', err)
