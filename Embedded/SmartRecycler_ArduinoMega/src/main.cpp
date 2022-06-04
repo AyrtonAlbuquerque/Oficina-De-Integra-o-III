@@ -72,7 +72,6 @@ Servo servoR;
 Led containers;
 bool processing;
 long start;
-String current_message;
 
 /* -------------------------------------------------------------------------- */
 /*                                Declarations                                */
@@ -83,7 +82,7 @@ Waste *parseResponse(String response);
 
 void recycle(Waste *item);
 
-void generateQRCode(String host, String code, String type);
+void generateQRCode(String host, String code, int type);
 
 void updateLED(int container);
 
@@ -106,7 +105,6 @@ void setup() {
 
     // Setup system variables
     processing = false;
-    current_message = "";
 
     // Setup the serial
     Serial3.begin(BAUD_RATE);
@@ -140,7 +138,7 @@ void setup() {
     servoR.attach(SERVOR_PIN);
     servoL.attach(SERVOL_PIN);
     sweepServo(servoT, 85);
-    sweepServo(servoL, 90);
+    sweepServo(servoL, 140);
     sweepServo(servoR, 90);
 
     // Container setup
@@ -175,12 +173,12 @@ void loop() {
             // Turn on the Led tape
             digitalWrite(LED_TAPE_PIN, LOW);
             // Notify ESP32 to take a picture and get classification
-            Serial3.println(".");
+            Serial3.println("ok");
         } else {
             // If not processing, check and display messages from ESP32
             if (Serial3.available()) {
-                delay(5);
                 // Handle the serial message
+                delay(5);
                 String response = getResponse();
 
                 // If it is a valid response
@@ -196,8 +194,8 @@ void loop() {
         if ((millis() - start) <= PROCESS_TIMEOUT) {
             // If there is a response from ESP32
             if (Serial3.available()) {
-                delay(5);
                 // Handle the serial message
+                delay(5);
                 String response = getResponse();
 
                 // If it is a valid message
@@ -205,10 +203,10 @@ void loop() {
                     // Parse the response string
                     item = parseResponse(response);
 
-                    // If item type is NULL or empty than its just a message from ESP32
-                    if (String(item->type).equals("") || !(item->type)) {
+                    // If item type is less than 1 or greater than 6, than its just a message from ESP32
+                    if (item->type < 1 || item->type > 6) {
                         // Display the message in the screen
-                        if (!item->message)
+                        if (!(item->message))
                             displayMessage("ESP Message error");
                         else
                             displayMessage(item->message);
@@ -254,32 +252,30 @@ Waste *parseResponse(String response) {
 }
 
 void recycle(Waste *item) {
-    String host, code, type;
-
-    // If item is not null
     if (item) {
-        host = String(item->host);
-        code = String(item->code);
-        type = String(item->type);
-
         // Generate and show QRCode
-        generateQRCode(host, code, type);
+        generateQRCode(String(item->host), String(item->code), item->type);
 
-        // Waste treatment based on type (0 -> Metals | 1-2 -> Paper | 3-5 -> Plastic | Other)
-        if (type.equals("0") && containers.metal == LOW)
+        // Waste treatment based on type (6 -> Metals | 2-4 -> Paper | 1-3-5 -> Plastic | Other)
+        if (item->type == 6 && containers.metal == LOW)
             moveServos(servoT, 85, 25, servoR, 90, 10);
-        else if ((type.equals("1") || type.equals("2")) && containers.paper == LOW)
+        else if ((item->type == 2 || item->type == 4) && containers.paper == LOW)
             moveServos(servoT, 85, 25, servoR, 90, 170);
-        else if ((type.equals("3") || type.equals("4") || type.equals("5")) && containers.plastic == LOW)
-            moveServos(servoT, 85, 155, servoL, 90, 10);
-        else
-            moveServos(servoT, 85, 155, servoL, 90, 170);
+        else if ((item->type == 1 || item->type == 3 || item->type == 5) && containers.plastic == LOW) {
+            servoL.write(90);
+            moveServos(servoT, 85, 155, servoL, 140, 10);
+        }
+        else {
+            servoL.write(90);
+            moveServos(servoT, 85, 155, servoL, 140, 170);
+        }
     } else {
+        servoL.write(90);
         moveServos(servoT, 85, 155, servoL, 90, 170);
     }
 
     // Update the containers leves
-    for (size_t i = 0; i < CONTAINER_COUNT; i++) {
+    for (int i = 0; i < CONTAINER_COUNT; i++) {
         updateLED(i);
     }
 
@@ -287,15 +283,15 @@ void recycle(Waste *item) {
     display.Print_String("SMART RECYCLER:Ready", 7, 0);
 }
 
-void generateQRCode(String host, String code, String type) {
+void generateQRCode(String host, String code, int type) {
     QRCode qrcode;
     int offset_x = 7;
     int offset_y = 10;
     uint8_t data[qrcode_getBufferSize(QRCODE_VERSION)];
-    String url = "http://" + host + ":8081?r=" + code + "&l=" + type;
-    String text = (type.equals("0") ? "METAL" :
-                  (type.equals("1") || type.equals("2")) ? "PAPER" :
-                  (type.equals("3") || type.equals("4") || type.equals("5")) ? "PLASTIC" : "OTHER");
+    String url = "http://" + host + ":8080?r=" + code + "&l=" + String(type);
+    String text = (type == 6 ? "METAL" :
+                  (type == 2 || type == 4) ? "PAPER" :
+                  (type == 1 || type == 3 || type == 5) ? "PLASTIC" : "OTHER");
     Serial.println("URL: " + url);
 
     // Create the QRCode
@@ -403,7 +399,6 @@ void displayMessage(String message) {
     display.Set_Text_Size(1);
     display.Print_String("SMART RECYCLER", 23, 0);
     display.Print_String(message, x, 58);
-    current_message = message;
     Serial.println(message);
 }
 

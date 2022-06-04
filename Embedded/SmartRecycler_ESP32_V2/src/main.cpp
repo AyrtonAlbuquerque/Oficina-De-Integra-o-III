@@ -20,10 +20,10 @@ const char *ssid = "AndroidAP";
 const char *password = "gisi6622";
 const String url = "http://192.168.0.239:8081/classifications/request";
 const String host = "192.168.0.239";
-const int port = 8081;
 const String recyclerID = "1";
-int status = WL_IDLE_STATUS;
-String bound = "boundry";
+const String bound = "boundry";
+const int port = 8081;
+const int status = WL_IDLE_STATUS;
 bool ok = false;
 
 /* -------------------------------------------------------------------------- */
@@ -68,38 +68,39 @@ void loop() {
         // If message received from Arduino
         if (Serial.available()) {
             // Clear the Serial buffer
-            Serial.readString();
-            // Save start time
-            start = millis();
-            ok = false;
-            // While not timed out
-            while ((millis() - start) < TIMEOUT && !ok) {
-                // Take a picture
-                frame = esp_camera_fb_get();
-                esp_camera_fb_return(frame);
-                frame = esp_camera_fb_get();
-                esp_camera_fb_return(frame);
-                frame = esp_camera_fb_get();
-                if (!frame) {
-                    sendResponse("Failed to capture\nimage");
-                } else {
-                    // Begin connection with the server
-                    if (!client.connect(host.c_str(), port)) {
-                        sendResponse("Connection to the\nserver failed!");
+            String response = Serial.readString();
+            // If it is a signal from arduino
+            if (response.indexOf("ok") != -1) {
+                // Save start time
+                start = millis();
+                ok = false;
+                // While not timed out
+                while ((millis() - start) < TIMEOUT && !ok) {
+                    // Take a picture
+                    frame = esp_camera_fb_get();
+                    esp_camera_fb_return(frame);
+                    frame = esp_camera_fb_get();
+                    esp_camera_fb_return(frame);
+                    frame = esp_camera_fb_get();
+                    if (!frame) {
+                        sendResponse("Failed to capture\nimage");
                     } else {
-                        // Send request to server and get response
-                        sendImage(frame, client);
-                        // Send response to Arduino
-                        sendResponse(client.readString());
-                        // End the client connection
-                        esp_camera_fb_return(frame);
-                        if (ok) {
+                        // Begin connection with the server
+                        if (!client.connect(host.c_str(), port)) {
+                            sendResponse("Connection to the\nserver failed!");
+                        } else {
+                            // Send request to server and get response
+                            sendImage(frame, client);
+                            // Send response to Arduino
+                            sendResponse(client.readString());
+                            // End the client connection
+                            esp_camera_fb_return(frame);
                             client.stop();
                             break;
                         }
                     }
+                    esp_camera_fb_return(frame);
                 }
-                esp_camera_fb_return(frame);
             }
         }
     } else {
