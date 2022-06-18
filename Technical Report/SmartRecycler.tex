@@ -121,66 +121,22 @@ The image classification takes place as soon as some item is thrown into the Sma
 
 When the user scans the \textit{QR Code} he/she will be rewarded with a symbolical credit amount that is stored in a digital wallet. This wallet is part of a Web Application that was developed to help the user maintain its credits and visualize information about the waste recycled presented on section \ref{subsec:webapp}. The application also allows credit transactions between users.
 
-An item can be classified as one of six classes defined in the project and can be disposed in one of the four containers, those being \textit{soda cans} disposed in the metal container, figure \ref{fig:soda}, \textit{juice boxes} and \textit{crumpled paper}, figures \ref{fig:juicebox} and \ref{fig:paperball} respectively, disposed in the paper container, \textit{plastic bottle}, \textit{plastic cup}, and \textit{chip bags}, figures \ref{fig:plasticbottle}, \ref{fig:plasticcup} and \ref{fig:chips} respectively, disposed in the plastic container and finally the fourth container is destined to \textit{others}.
+An item can be classified as one of six classes defined in the project and can be disposed in one of the four containers, those being \textit{soda cans} disposed in the metal container, \textit{juice boxes} and \textit{crumpled paper}, disposed in the paper container, \textit{plastic bottle}, \textit{plastic cup}, and \textit{chip bags}, disposed in the plastic container and finally the fourth container is destined to \textit{others}.
 
-Once an item is classified the recycling process begins by moving a set of three motors divided into two levels in coordination. The first level motor rotates to either left or right and depending on the classification, the second level motor will rotate to front or back. All the information generated during the recycling process is stored in a database and statistics about it can be seen in the web application. It can be seen in the figures \ref{fig:paperball}, \ref{fig:juicebox},\ref{fig:chips}, \ref{fig:plasticbottle}, \ref{fig:plasticcup} and \ref{fig:soda} a example of each class.
-
-\begin{figure}[H]
-  \centering
-  \begin{minipage}{.5\textwidth}
-    \centering
-    \includegraphics[width=.8\linewidth]{Figures/Classificiations/paperball.png}
-    \caption{\small{Crumped paper}}
-    \label{fig:paperball}
-  \end{minipage}%
-  \begin{minipage}{.5\textwidth}
-    \centering
-    \includegraphics[width=.8\linewidth]{Figures/Classificiations/juicebox.png}
-    \caption{\small{Juice box}}
-    \label{fig:juicebox}
-  \end{minipage}
-\end{figure}
-
+Once an item is classified the recycling process begins by moving a set of three motors divided into two levels in coordination. The first level motor rotates to either left or right and depending on the classification, the second level motor will rotate to front or back. All the information generated during the recycling process is stored in a database and statistics about it can be seen in the web application. An example of each class can be seen in figure \ref{fig:classes}.
 
 \begin{figure}[H]
   \centering
-  \begin{minipage}{.5\textwidth}
-    \centering
-    \includegraphics[width=.8\linewidth]{Figures/Classificiations/ChipsBag.png}
-    \caption{\small{Chips bag}}
-    \label{fig:chips}
-  \end{minipage}%
-  \begin{minipage}{.5\textwidth}
-    \centering
-    \includegraphics[width=.8\linewidth]{Figures/Classificiations/plasticBottle.png}
-    \caption{\small{Plastic bottle}}
-    \label{fig:plasticbottle}
-  \end{minipage}
+  \includegraphics[width=10cm]{Figures/Classes.png}
+  \caption{\small{Classes detected}}
+  \label{fig:classes}
 \end{figure}
-
-\begin{figure}[H]
-  \centering
-  \begin{minipage}{.5\textwidth}
-    \centering
-    \includegraphics[width=.8\linewidth]{Figures/Classificiations/plasticCup.png}
-    \caption{\small{Plastic cup}}
-    \label{fig:plasticcup}
-  \end{minipage}%
-  \begin{minipage}{.5\textwidth}
-    \centering
-    \includegraphics[width=.8\linewidth]{Figures/Classificiations/sodaCan.png}
-    \caption{\small{Soda can}}
-    \label{fig:soda}
-  \end{minipage}
-\end{figure}
-
-
 
 \section{Project Specifications}
 \label{sec:specification}
 \noindent
 
-The following subsections describe the requirements, components, and tools used in the project.
+The following describes the requirements, components and tools used in the project.
 
 \subsection{Requirements}
 \label{subsec:requirement}
@@ -341,7 +297,7 @@ The flaps responsible for sorting the waste are sustained by an 8mm thick iron b
 
 \subsubsection{Electronic Components}
 The embedded system is composed of an Arduino Mega 2560, \ref{subsubsec:arduino}, that controls, receives, and processes the signals from the sensors and motors, and an ESP32, \ref{subsubsec:esp32}, that is responsible for the camera and WiFi connection.
-The control of flaps of the system is composed of three servomotors mg996r, \ref{subsubsec:servomotor}. The detection of the opening of the gate is done with an infrared LM393 sensor, \ref{subsubsec:irsensor}. There are four hc-sr04 ultrasonic sensors , \ref{subsubsec:esp32}, to determine the level of the bins with a red LED each to represent when its bin is full. To illuminate the chamber where the picture is taken a led tape is used, with a relay that controls its activation. For the interface with the user, there is an OLED display 1.6", \ref{subsubsec:oleddisplay}, that displays the QR code and other messages from the system. As it can be seen in pictures of the subsection \ref{subsec:Hardware}.
+The control of flaps of the system is composed of three servomotors mg996r, \ref{subsubsec:servomotor}. The detection of the opening of the gate is done with an infrared LM393 sensor. There are four hc-sr04 ultrasonic sensors , \ref{subsubsec:esp32}, to determine the level of the bins with a red LED each to represent when its bin is full. To illuminate the chamber where the picture is taken a led tape is used, with a relay that controls its activation. For the interface with the user, there is an OLED display 1.6", \ref{subsubsec:oleddisplay}, that displays the QR code and other messages from the system. As it can be seen in pictures of the subsection \ref{subsec:Hardware}.
 
 \subsubsection{Back end}
 The Back end was written in the Python\cite{python}  programming language, chosen due to its ease of reading and writing nature, and implements a REST API using the Flask\cite{flask} framework, a library that takes only a few lines of code to implement a production-ready server. It exposes certain routes that allow the web application and the embedded software to communicate with it. The data is received and returned in the JSON format, a widely known format for transmitting data.
@@ -352,7 +308,7 @@ The back end runs in a server running in the same network as the Smart Recycler,
 
 
 \subsubsection{Web Application}
-The Web Application was written using VueJs\cite{vuejs}, a Javascript open-source framework created to handle the hard parts of writing a single-page application. With this framework and some of its known libraries like Vue Router, axios, and Vue\-tify, the process of creating a responsive and functional web experience was made possible.
+The Web Application was written using VueJs\cite{vuejs}, a Javascript framework created to handle the hard parts of writing a single-page application. With it and some of its known libraries like Vue Router and Vuetify, the process of creating a responsive and functional web experience was made possible.
 
 \subsubsection{Inference System}
 The inference system requires three main steps to work: dataset creation, training of the neural network, and the use of the trained neural network model. To create the dataset, VoTT\cite{vott} - a visual object tagging tool - was used to annotate our images and separate them into our trained classes. After that, the Python library imgaug was used to implement the process of image augmentation and increase the dataset size. The deep learning API Keras\cite{keras} enabled the training of the neural network, keras runs on top of the Tensorflow\cite{tensorflow} machine learning library, a widely known library for machine learning projects. To run the network model created the keras API was also used, it allowed loading the neural network model and running the prediction process.
@@ -363,7 +319,7 @@ This section describes the development and functionalities of the project
 
 \subsection{Mechanical Structure}
 \label{subsec:Mechanical}
-The mechanical structure was first modeled using the \textit{AutoCad} \cite{AutoCad} tool and then all the parts necessary to build were produced by a woodworker, starting with the container section. Containers were divided into four parts, each having a 25x25cm base and a total of 60cm height. Figure \ref{fig:containerModel}.
+The mechanical structure was first modeled using the \textit{AutoCad} \cite{AutoCad} tool and then all the parts necessary to build were produced by a woodworker, starting with the container section. The containers were divided into four parts, each having a 25x25cm base and a total of 60cm height.
 
 \begin{figure}[H]
   \centering
@@ -372,45 +328,22 @@ The mechanical structure was first modeled using the \textit{AutoCad} \cite{Auto
   \label{fig:containerModel}
 \end{figure}
 
-The second modeled part was the sorting section. Following the container section constraints, the sorting part has a 50x50cm dimension and 40cm height. It houses two of the three flaps and motors as well as four ultrasonic sensors. To protect the components and wires connecting to the micro-controller a hollow middle section was designed, containing only a hole near one of the walls to allow wires to be passed through. Figure \ref{fig:sortingModel1}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=10cm]{Figures/Sorting1.png}
-  \caption{\small{Sorting section model}}
-  \label{fig:sortingModel1}
-\end{figure}
-
-As mentioned before, the flaps are sustained by an 8mm iron bar attached to a ball bearing on the opposite side of the motor. This allows the motor to freely rotate while providing good resistance to weights falling in the flaps.  Figure \ref{fig:sortingModel2} and \ref{fig:coverModel3}.
+The second modeled part was the sorting section. Following the container section constraints, the sorting part has a 50x50cm dimension and 40cm height. It houses two of the three flaps and motors as well as four ultrasonic sensors. To protect the components and wires connecting to the micro-controller a hollow middle section was designed, containing only a hole near one of the walls to allow wires to be passed through.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=10cm]{Figures/Sorting2.png}
-  \caption{\small{Sorting flaps iron axis}}
-  \label{fig:sortingModel2}
+  \caption{\small{Sorting section model}}
+  \label{fig:sortingModel1}
 \end{figure}
+
+Lastly, the cover section was modeled. It was designed in a way that separates the electronic components from the waste that would be thrown inside the Smart Recycler.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=5cm]{Figures/TopFlap.jpg}
-  \caption{\small{Cover section Flap}}
-  \label{fig:coverModel3}
-\end{figure}
-
-Lastly, the cover section was modeled. It was designed in a way that separates the electronic components from the waste that would be thrown inside the Smart Recycler. Figures \ref{fig:coverModel1}, \ref{fig:coverModel2} and \ref{fig:coverModel3}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=10cm]{Figures/Cover Model.png}
+  \includegraphics[width=10cm]{Figures/Cover Part.png}
   \caption{\small{Cover section model}}
   \label{fig:coverModel1}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=10cm]{Figures/Cover Built.png}
-  \caption{\small{Cover section built}}
-  \label{fig:coverModel2}
 \end{figure}
 
 The final assembled structure can be seen in figure \ref{fig:fullBody}:
@@ -424,6 +357,7 @@ The final assembled structure can be seen in figure \ref{fig:fullBody}:
 
 \subsection{Hardware Components}
 \label{subsec:Hardware}
+The following subsections describe the most important utilized during the development of the project.
 \subsubsection{Module Esp32-Cam Ov2640 2MP}
 \label{subsubsec:esp32}
 The ESP32-CAM is a small size, low-power consumption camera module based on ESP32. It comes with an OV2640 camera and provides an onboard TF card slot \cite{evelta}. Figure \ref{fig:Esp32}.
@@ -439,7 +373,7 @@ With a wide range of uses, from wireless video monitoring to QR identification, 
 
 \subsubsection{Arduino Mega 2560 R3}
 \label{subsubsec:arduino}
-The Arduino Mega 2560 is a microcontroller board based on the ATmega2560. The selection of this micro-controller board as one of the main processing units of this project took into account the number of digital input/output pins, the supported number of PWM outputs, low cost, familiarity, and ease of use of the component by the members of the team\cite{arduino}.In this project, the mega is responsible for controlling most of the system, such as the rotation of the flaps, verification of ultrasonic and infrared sensors, activation of the led tape, communication with ESP32, and the displayed messages in the OLED display. it also has an easy-to-use interface with most of the peripherals.Figure \ref{fig:Arduino}.
+The Arduino Mega 2560 is a microcontroller board based on the ATmega2560. The selection of this micro-controller board as one of the main processing units of this project took into account the number of digital input/output pins, the supported number of PWM outputs, low cost, familiarity, and ease of use of the component by the members of the team\cite{arduino}.
 
 \begin{figure}[H]
   \centering
@@ -448,31 +382,20 @@ The Arduino Mega 2560 is a microcontroller board based on the ATmega2560. The se
   \label{fig:Arduino}
 \end{figure}
 
-\subsubsection{Lead-Acid Battery Zebra Ps4024}
+\subsubsection{Lead-Acid Battery Zebra Ps4024 and Voltage regulator lm2596}
 \label{subsubsec:battery}
-To make the project more portable, we decided to use a battery as a power supply. So it was chosen a rechargeable Lead-Acid Battery with a 12V-7Ah output, is capable to supply the whole system for over 48 hours. Figure \ref{fig:Battery}.
+To make the project more portable, we decided to use a battery as a power supply. So it was chosen a rechargeable Lead-Acid Battery with a 12V-7Ah output, is capable to supply the whole system for over 48 hours. Due to the voltage output of a little more than 12V, about 12.83V, of the battery, it was necessary for a step-down regulator to safely supply the peripherals. There are three regulators, one for the servo-motors with an output of 6V, one for the Arduino mega with an output of 9V, and a third one for the other components with an output of 5V.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=2cm]{Figures/WDC_Bateria_VRLA_9AH_12V_1200Wx1200H.jpg}
+  \includegraphics[width=6cm]{Figures/Battery-Regulator.png}
   \caption{\small{Lead-Acid Battery}}
   \label{fig:Battery}
 \end{figure}
 
-\subsubsection{Voltage regulator lm2596}
-\label{subsubsec:Voltage}
-Due to the voltage output of a little more than 12V, about 12.83V, of the battery, it was necessary for a step-down regulator to safely supply the peripherals. There are three regulators, one for the servo-motors with an output of 6V, one for the Arduino mega with an output of 9V, and a third one for the other components with an output of 5V. To avoid noise, the grounds of the regulator of the servo-motors and the rest of the system are joined by a single point. Figure \ref{fig:VoltageRegulator}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=2cm]{Figures/voltageRegulator.jpg}
-  \caption{\small{Voltage regulator Step-down LM25960}}
-  \label{fig:VoltageRegulator}
-\end{figure}
-
 \subsubsection{High Torque Servo Motor Mg996r}
 \label{subsubsec:servomotor}
-This High-Torque MG996R Digital Servo features metal gearing resulting in extra high 10kg stalling torque per cm in a tiny package. This high-torque standard servo can rotate approximately 180 degrees (90 in each direction) \cite{servo}. Figure \ref{fig:servo}.
+This High-Torque MG996R Digital Servo features metal gearing resulting in extra high 10kg stalling torque per cm in a tiny package. This high-torque standard servo can rotate approximately 180 degrees (90 in each direction) \cite{servo}.
 
 \begin{figure}[H]
   \centering
@@ -483,20 +406,9 @@ This High-Torque MG996R Digital Servo features metal gearing resulting in extra 
 
 In this project were used three of such servos to do a precise flap control, with them being controlled by the Arduino mega. To take into account the noise generated by the servos it was also put a 47 $\mu$F capacitor between the 6V and the ground.
 
-\subsubsection{Infrared Sensor Ir Lm393}
-\label{subsubsec:irsensor}
-This simple to use infrared sensor, being supplied 5V with an output pin to indicate the present state, was used in the system to detect the opening of the gate, which was used to reference the input of items in the bin \cite{irsensor}. Figure \ref{fig:ir}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=2cm]{Figures/infraRed_sensor.jpg}
-  \caption{\small{Infra Red Sensor}}
-  \label{fig:ir}
-\end{figure}
-
 \subsubsection{OLED Display 1.6" \space LCD}
 \label{subsubsec:oleddisplay}
-As one of the interfaces with the user, this display shows to them several messages and the QR code that will be used to redeem the credits in the web app. This display has a 130x130 resolution and an I2C interface. It permits the creation of graphs, in our case QR codes, and texts with ease \cite{oleddisplay}. Figure \ref{fig:display}.
+As one of the interfaces with the user, this display shows to them several messages and the QR code that will be used to redeem the credits in the web app. This display has a 130x130 resolution and an I2C interface. It permits the creation of graphs, in our case QR codes, and texts with ease \cite{oleddisplay}.
 
 \begin{figure}[H]
   \centering
@@ -505,43 +417,24 @@ As one of the interfaces with the user, this display shows to them several messa
   \label{fig:display}
 \end{figure}
 
-\subsubsection{Ultrasonic Sensor Hc-sr04}
+\subsubsection{Sensors}
 \label{subsubsec:ultrasonic}
-HC-SR04 is an ultrasonic ranging module that provides 2 cm to 400 cm non-contact measurement function\cite{ultrasonic}. This module is used as a means to discover when the compartment bins got full by getting the distance between them and the closest trash. Figure \ref{fig:ultrasonic}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=2cm]{Figures/ultrasonico_hc.jpg}
-  \caption{\small{Ultrasonic Sensor hc-sr04}}
-  \label{fig:ultrasonic}
-\end{figure}
-
-\subsubsection{Led Tape 3528 White}
-\label{subsubsec:ledtape}
-In this project, good quality pictures of the items disposed is a vital requirement, so it was necessary to create a well-illuminated environment inside the chamber. To solve this problem it was used a 12V led tape that, in the closed chamber, provided a constant and clear light source. Figure \ref{fig:ledtape}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=2cm]{Figures/ledtape.jpg}
-  \caption{\small{Led Tape}}
-  \label{fig:ledtape}
-\end{figure}
-
-\subsubsection{Red LED's}
-\label{subsubsec:redleds}
-The necessity to indicate the fact that one or more of the containers are full, it was implemented in this project with one red led for each bin. This way if the red led of a respective bin is on, then the respective container is full and needs to be depleted.
+HC-SR04 is an ultrasonic ranging module that provides 2 cm to 400 cm non-contact measurement function\cite{ultrasonic}. To measure the fill level of each container an ultrasonic sensor Hc-sr04 module is used and to detect when something is thrown inside the Smart Recycler an infrared sensor is used.
 
 \subsection{Electronic Circuit}
 Beginning the project with the testing of all the components individually, making sure of their use and functionality, it was then necessary the creation of the first design of the electronic circuit. After the test of this first design on a breadboard, it was noticed some noises that were affecting the system. So to resolve this issue three capacitors were added, two between the 5V and ground and one between 6V and ground. Finally, everything was assembled on the standard board.
 
-The ESP32-Cam is powered by the 5V regulator and communicates with the Arduino board via UART. The servo-motors that control the flaps, powered by the 6V regulator, are connected to the PWM pins of the Arduino board. The infrared, used to detect the opening of the gate, is powered by the 5V regulator and directly connected to the Arduino's GPIO. The led tape is directly connected to the 12V battery and a relay module. The relay module is then connected to the 5V regulator and the GPIO pin of the Arduino. The ultrasonic sensors are powered by the 5V regulator with the trigger pin connected to the GPIO and the echo pin to the PWM pins in the Arduino. The OLED display is powered by the 5V regulator and communicates with the Arduino via the I2C pins. The schematic diagram is shown in the figure \ref{fig:circuit}.
+The ESP32-Cam is powered by the 5V regulator and communicates with the Arduino board via UART. The servo-motors that control the flaps, powered by the 6V regulator, are connected to the PWM pins of the Arduino board. The infrared, used to detect the opening of the gate, is powered by the 5V regulator and directly connected to the Arduino's GPIO. The led tape is directly connected to the 12V battery and a relay module. The relay module is then connected to the 5V regulator and the GPIO pin of the Arduino. The ultrasonic sensors are powered by the 5V regulator with the trigger pin connected to the GPIO and the echo pin to the PWM pins in the Arduino. With each red led corresponding to one ultrasonic sensor, indicating when the bin is full, they are connected to the 5V regulator and the GPIO pins of the Arduino.The O display is powered by the 5V regulator and communicates with the Arduino via the I2C pins. The schematic diagram is shown bellow in the figure \ref{fig:circuit}.
+\newpage
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=17.8cm, angle=-90]{Figures/Eletronical Circuit.pdf}
+  \includepdf[pages=-, angle=-90]{Figures/Circuit.pdf}
   \caption{\small{Electronic circuit made with Altium}}
   \label{fig:circuit}
 \end{figure}
+
+\newpage
 
 \subsection{Firmware}
 Since the project consists of two micro-controllers two firmware's were created, one for the ESP32 and the other for the Arduino Mega. The ESP32-Cam firmware was the first to be developed and, as pointed out before, its purpose is to take pictures of the waste items inside the Smart Recycler and communicate with the back end. Initially, the micro-controller keeps trying to establish a connection with a specified WiFi network only proceeding when successful.
@@ -550,11 +443,11 @@ Once connected, the micro-controller awaits an OK signal from the Arduino Mega t
 
 With the image captured the ESP32-Cam then tries to establish a connection with the back end so the image can be sent using \textit{HTTP POST} protocols. The received response from the back end is a \textit{JSON} string that is parsed using the \textit{ArduinoJSON} library \cite{ArduinoJson}. Finally, a response is sent to the Arduino Mega in a \textit{JSON} format containing the host IP address, image classification, and redeem code that will be used by the Arduino Mega to generate a \textit{QR Code} to be displayed to the user.
 
-The final ESP32-Cam firmware behavior can be seen in the state diagram in figure:
+The final ESP32-Cam firmware behavior can be seen in the state diagram in figure \ref{fig:espState}.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=12cm]{Figures/State Chart Esp32.png}
+  \includegraphics[width=9.2cm]{Figures/State Chart Esp32.png}
   \caption{\small{Esp32-Cam state diagram}}
   \label{fig:espState}
 \end{figure}
@@ -565,11 +458,11 @@ After receiving a response from the ESP module the Arduino will then generate an
 
 After properly disposing of the item, the four ultrasonic sensors are measured, updating the fill level of each container. If any of the containers are filled enough so that the amount of waste inside it is within 10cm of the ultrasonic sensor the respective led will be turned on, signalizing that such container is full and no more waste can be disposed of there. If a container is full and an item that should be disposed of in such container is thrown inside the recycler, it will be directed to the \textit{Other} container instead.
 
-The final Arduino Mega firmware behavior can be seen in the state diagram in figure\ref{fig:arduinoState}:
+The final Arduino Mega firmware behavior can be seen in the state diagram in figure \ref{fig:arduinoState}.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=12cm]{Figures/State chart Arduino Mega.png}
+  \includegraphics[width=8.9cm]{Figures/State chart Arduino Mega.png}
   \caption{\small{Arduino Mega state diagram}}
   \label{fig:arduinoState}
 \end{figure}
@@ -639,18 +532,18 @@ The following table details the project budget and the amount of money spent on 
   \begin{center}
     \begin{tabular}{|l|c|l|l|}
       \hline
-      \textbf{Item}                           & \textbf{Qnt} & \textbf{Unit Cost} & \textbf{Total Cost} \\ \hline
-      Arduino Mega 2560 R3                    & 1            & R\$ 114,00         & R\$ 114,00          \\ \hline
-      Voltage Regulator Xl4015                & 3            & R\$ 14,00          & R\$ 42,00           \\ \hline
-      Lead-Acid Battery Zebra Ps4024          & 1            & R\$ 130,00         & R\$ 130,00          \\ \hline
-      High Torque Servo Motor Mg996           & 4            & R\$ 50,00          & R\$ 200,00          \\ \hline
-      Infrared Sensor Ir Lm393                & 1            & R\$ 12,00          & R\$ 12,00           \\ \hline
-      Oled Display 1.6 LCD Pic 130*130        & 1            & R\$ 60,00          & R\$ 60,00           \\ \hline
-      Module Esp32-Cam Ov2640                 & 2            & R\$ 86,00          & R\$ 172,00          \\ \hline
-      Ultrasonic Sensor Hc-sr04               & 4            & R\$ 15,00          & R\$ 60,00           \\ \hline
-      Led Tape 3528 White                     & 1            & R\$ 32,00          & R\$ 32,00           \\ \hline
-      Other materials/components/replacements & 1            & R\$ 100,00         & R\$ 100,00          \\ \hline
-      \textbf{Total}                          & -            & -                  & \textbf{R\$ 922,00} \\ \hline
+      \textbf{Item}                    & \textbf{Qnt} & \textbf{Unit Cost} & \textbf{Total Cost} \\ \hline
+      Arduino Mega 2560 R3             & 1            & R\$ 114,00         & R\$ 114,00          \\ \hline
+      Voltage Regulator Xl4015         & 3            & R\$ 14,00          & R\$ 42,00           \\ \hline
+      Lead-Acid Battery Zebra Ps4024   & 1            & R\$ 130,00         & R\$ 130,00          \\ \hline
+      High Torque Servo Motor Mg996    & 4            & R\$ 50,00          & R\$ 200,00          \\ \hline
+      Infrared Sensor Ir Lm393         & 1            & R\$ 12,00          & R\$ 12,00           \\ \hline
+      Oled Display 1.6 LCD Pic 130*130 & 1            & R\$ 60,00          & R\$ 60,00           \\ \hline
+      Module Esp32-Cam Ov2640          & 2            & R\$ 86,00          & R\$ 172,00          \\ \hline
+      Ultrasonic Sensor Hc-sr04        & 4            & R\$ 15,00          & R\$ 60,00           \\ \hline
+      Led Tape 3528 White              & 1            & R\$ 32,00          & R\$ 32,00           \\ \hline
+      Other materials/components       & 1            & R\$ 150,00         & R\$ 150,00          \\ \hline
+      \textbf{Total}                   & -            & -                  & \textbf{R\$ 972,00} \\ \hline
     \end{tabular}
   \end{center}
   \label{tab:budget}
@@ -666,17 +559,17 @@ The table below details the estimated and worked hours during the development of
   \begin{center}
     \begin{tabular}{|l|l|l|l|}
       \hline
-      \textbf{Deliverable}           & \textbf{Estimated} & \textbf{Estimated + 30\%} & \textbf{Worked} \\ \hline
-      Blog Page and Project Planning & 52                 & 67.6                      & 46              \\ \hline
-      Mechanical Project             & 33,5               & 43.55                     & 34,5            \\ \hline
-      Hardware Project               & 43                 & 55.9                      & 46,8            \\ \hline
-      Software Project               & 70,5               & 91.65                     & 74,5            \\ \hline
-      Integration                    & 50                 & 65                        & 48              \\ \hline
-      Overall Integration and Tests  & 42                 & 54.6                      & 51              \\ \hline
-      Documentation                  & 18                 & 23.4                      & 25,5            \\ \hline
-      Blog Keeping and Meetings      & 31                 & 40.3                      & 31              \\ \hline
-      \textbf{Total}                 & \textbf{340}       & \textbf{442}              & \textbf{357,3}  \\ \hline
-      \textbf{Delay within}          & \textbf{5\%}       & -                         & -               \\ \hline
+      \textbf{Deliverable}               & \textbf{Estimated} & \textbf{Estimated + 30\%} & \textbf{Worked} \\ \hline
+      Blog Page and Project Planning     & 52                 & 67.6                      & 46              \\ \hline
+      Mechanical Project                 & 33,5               & 43.55                     & 34,5            \\ \hline
+      Hardware Project                   & 43                 & 55.9                      & 46,8            \\ \hline
+      Software Project                   & 70,5               & 91.65                     & 74,5            \\ \hline
+      Integration                        & 50                 & 65                        & 48              \\ \hline
+      Overall Integration and Tests      & 42                 & 54.6                      & 51              \\ \hline
+      Documentation                      & 18                 & 23.4                      & 25,5            \\ \hline
+      Blog Keeping and Meetings          & 31                 & 40.3                      & 31              \\ \hline
+      \textbf{Total}                     & \textbf{340}       & \textbf{442}              & \textbf{357,3}  \\ \hline
+      \textbf{Delay estimated vs worked} & \textbf{5\%}       & -                         & -               \\ \hline
     \end{tabular}
   \end{center}
   \label{tab:schedule}
@@ -699,16 +592,7 @@ Another problem was the resiliance of parts of the servo motors, which were some
 Being the source of most of the mechanical and hardware problems, another issue found with the motors was the noise caused in the circuit. This hindrance was neatly solved by adding some filter capacitors in some of the key parts of the system, such as between 5V and Ground, and between 6V and Ground.
 
 
-The first trained neural network was based on the \textit{ResNet50V2} and despite presenting an accuracy of 86,47\% in the training, which was within the required range of 80\%, when put to test in a real scenario it performed poorly for a couple of classes as can be seen in the figure \ref{fig:resnet}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=10cm]{Figures/ResNet50V2-E150-6C-0-PRED.png}
-  \caption{\small{ResNet50V2 inference prediction}}
-  \label{fig:resnet}
-\end{figure}
-
-The resultant network was also quite heavy with over 90 MB in size and with a model loss that almost reached 40\%.
+The first trained neural network was based on the \textit{ResNet50V2} and despite presenting an accuracy of 86,47\% in the training, which was within the required range of 80\%, when put to test in a real scenario it performed poorly for a couple of classes. The resultant network was also quite heavy with over 90 MB in size and with a model loss that almost reached 40\%.
 
 \begin{figure}[H]
   \centering
@@ -726,17 +610,9 @@ The second network training was based on the \textit{MobileNetV2} model and the 
   \label{fig:mobilenet}
 \end{figure}
 
-Thankfully the \textit{EffecientNetB4} model presented a really good accuracy with 99,98\% and a very low loss with 0,037\% while maintaining a moderate size of approximately 70 MB. The only downside of training this model is the time it takes to finish its training, in our case with 150 epochs taking over 5 hours in a computer with a GTX 1650 TI GPU with a 7.5 compute score. Another good result we had is the image quality from inside the cover as can be seen in figure \ref{fig:itens}. This was crucial to the success of the project since it affects the training of the network directly.
+Thankfully the \textit{EffecientNetB4} model presented a really good accuracy with 99,98\% and a very low loss with 0,037\% while maintaining a moderate size of approximately 70 MB. The only downside of training this model is the time it takes to finish its training, in our case with 150 epochs taking over 5 hours in a computer with a GTX 1650 TI GPU with a 7.5 compute score. Another good result we had is the image quality from inside the cover as can be seen in figure \ref{fig:classes}. This was crucial to the success of the project since it affects the training of the network directly.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=12cm]{Figures/InsideCover.png}
-  \caption{\small{Items inside the cover structure}}
-  \label{fig:itens}
-\end{figure}
-
-
-So even with the issues found along the way, after analysing everything it is possible to say that this project was a success, and our main goal was achieved. A link for a presentation video of the smart recycler can be found in the site of the project\cite{blog}.
+Despite the issues found along the way, after analysing everything it is possible to say that this project was a success, and our main goal was achieved. A link for the project video can be found in the project site \cite{blog}.
 
 
 % ---------------------------------------------------------------------------- %
@@ -745,4 +621,3 @@ So even with the issues found along the way, after analysing everything it is po
 \bibliographystyle{unsrt}
 \bibliography{Bibliography}
 \end{document}
-
