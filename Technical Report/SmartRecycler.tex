@@ -296,8 +296,8 @@ The mechanical structure was built using 15mm thick MDF boards, the only excepti
 The flaps responsible for sorting the waste are sustained by an 8mm thick iron bar that is attached to a ball bearing in the walls of the structure. This was necessary because the motors themselves were not able to fully sustain the weight of the flap boards. As it can be seen in the section \ref{subsec:Mechanical}.
 
 \subsubsection{Electronic Components}
-The embedded system is composed of an Arduino Mega 2560, \ref{subsubsec:arduino}, that controls, receives, and processes the signals from the sensors and motors, and an ESP32, \ref{subsubsec:esp32}, that is responsible for the camera and WiFi connection.
-The control of flaps of the system is composed of three servomotors mg996r, \ref{subsubsec:servomotor}. The detection of the opening of the gate is done with an infrared LM393 sensor. There are four hc-sr04 ultrasonic sensors , \ref{subsubsec:esp32}, to determine the level of the bins with a red LED each to represent when its bin is full. To illuminate the chamber where the picture is taken a led tape is used, with a relay that controls its activation. For the interface with the user, there is an OLED display 1.6", \ref{subsubsec:oleddisplay}, that displays the QR code and other messages from the system. As it can be seen in pictures of the subsection \ref{subsec:Hardware}.
+The embedded system is composed of an Arduino Mega 2560, detailed in section \ref{subsubsec:esp32}, that controls, receives, and processes the signals from the sensors and motors, and an ESP32, that is responsible for the camera and WiFi connection.
+The control of flaps of the system is composed of three servomotors mg996r, \ref{subsubsec:servomotor}. The detection of the opening of the gate is done with an infrared LM393 sensor. There are four hc-sr04 ultrasonic sensors , detailed in section \ref{subsubsec:esp32}, to determine the level of the bins with a red LED each to represent when its bin is full. To illuminate the chamber where the picture is taken a led tape is used, with a relay that controls its activation. For the interface with the user, there is an OLED display 1.6", \ref{subsubsec:servomotor}, that displays the QR code and other messages from the system. All these components can be seen in pictures of subsection \ref{subsec:Hardware}.
 
 \subsubsection{Back end}
 The Back end was written in the Python\cite{python}  programming language, chosen due to its ease of reading and writing nature, and implements a REST API using the Flask\cite{flask} framework, a library that takes only a few lines of code to implement a production-ready server. It exposes certain routes that allow the web application and the embedded software to communicate with it. The data is received and returned in the JSON format, a widely known format for transmitting data.
@@ -305,7 +305,6 @@ The Back end was written in the Python\cite{python}  programming language, chose
 To store its data, the Back end uses the PostgreSQL\cite{postgre} relational database, due to its ACID properties, this database management system was better suited to our needs.
 
 The back end runs in a server running in the same network as the Smart Recycler, the choice of running locally was made due to our scope, university environments, since universities usually have their own servers and powerful GPUs, needed for the inference system, it’s cheaper and easier to set up the Back end to run inside the university server.
-
 
 \subsubsection{Web Application}
 The Web Application was written using VueJs\cite{vuejs}, a Javascript framework created to handle the hard parts of writing a single-page application. With it and some of its known libraries like Vue Router and Vuetify, the process of creating a responsive and functional web experience was made possible.
@@ -357,80 +356,63 @@ The final assembled structure can be seen in figure \ref{fig:fullBody}:
 
 \subsection{Hardware Components}
 \label{subsec:Hardware}
-The following subsections describe the most important utilized during the development of the project.
-\subsubsection{Module Esp32-Cam Ov2640 2MP}
+The following subsections describe the most important components utilized during the development of the project.
+
+\subsubsection{Micro-controllers: Esp32-Cam and Arduino Mega 2560}
 \label{subsubsec:esp32}
-The ESP32-CAM is a small size, low-power consumption camera module based on ESP32. It comes with an OV2640 camera and provides an onboard TF card slot \cite{evelta}. Figure \ref{fig:Esp32}.
+The ESP32-CAM is a small size, low-power consumption camera module based on ESP32. It comes with an OV2640 camera and provides an onboard TF card slot \cite{evelta}.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=2cm]{Figures/esp32cam-1024x1024.jpg}
-  \caption{\small{Esp32-Cam Module}}
+  \includegraphics[width=8cm]{Figures/Micros.png}
+  \caption{\small{Esp32-Cam Module and Arduino Mega}}
   \label{fig:Esp32}
 \end{figure}
 
 With a wide range of uses, from wireless video monitoring to QR identification, the Esp32 was chosen for this project due to its WiFi image upload capacity. But due to its low number of GPIO ports, it was necessary the utilization of another processing unit.
 
-\subsubsection{Arduino Mega 2560 R3}
-\label{subsubsec:arduino}
-The Arduino Mega 2560 is a microcontroller board based on the ATmega2560. The selection of this micro-controller board as one of the main processing units of this project took into account the number of digital input/output pins, the supported number of PWM outputs, low cost, familiarity, and ease of use of the component by the members of the team\cite{arduino}.
+The Arduino Mega 2560 is a micro-controller board based on the ATmega\-2560. The selection of this micro-controller board as one of the main processing units of this project took into account the number of digital input/output pins, the supported number of PWM outputs, low cost, familiarity, and ease of use of the component by the members of the team\cite{arduino}.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=2cm]{Figures/arduinoMega.jpg}
-  \caption{\small{Arduino Mega 2560}}
-  \label{fig:Arduino}
-\end{figure}
-
-\subsubsection{Lead-Acid Battery Zebra Ps4024 and Voltage regulator lm2596}
+\subsubsection{Lead-Acid Battery Zebra Ps4024 and Voltage regulator LM2596}
 \label{subsubsec:battery}
-To make the project more portable, we decided to use a battery as a power supply. So it was chosen a rechargeable Lead-Acid Battery with a 12V-7Ah output, is capable to supply the whole system for over 48 hours. Due to the voltage output of a little more than 12V, about 12.83V, of the battery, it was necessary for a step-down regulator to safely supply the peripherals. There are three regulators, one for the servo-motors with an output of 6V, one for the Arduino mega with an output of 9V, and a third one for the other components with an output of 5V.
+To make the project more portable, we decided to use a battery as a power supply. So it was chosen a rechargeable Lead-Acid Battery with a 12V-7Ah output, capable to supply the whole system for over 48 hours. Due to the voltage output of a little more than 12V, about 12.83V, of the battery, 3 step-down regulators were necessary to safely supply the peripherals. From these three regulators, one is for the servo-motors with an output of 6V, one is for the Arduino Mega with an output of 9V, and a third one is for the other components with an output of 5V.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=6cm]{Figures/Battery-Regulator.png}
+  \includegraphics[width=9cm]{Figures/Battery-Regulator.png}
   \caption{\small{Lead-Acid Battery}}
   \label{fig:Battery}
 \end{figure}
 
-\subsubsection{High Torque Servo Motor Mg996r}
+\subsubsection{Servo Motor Mg996r and OLED Display 1.6" \space LCD}
 \label{subsubsec:servomotor}
 This High-Torque MG996R Digital Servo features metal gearing resulting in extra high 10kg stalling torque per cm in a tiny package. This high-torque standard servo can rotate approximately 180 degrees (90 in each direction) \cite{servo}.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=2cm]{Figures/servo-motor-mg996r-tower-pro-360-11kgcm-rotacao-continua-com-engrenagens-metalicas.jpg}
-  \caption{\small{Servo motor mg996r}}
+  \includegraphics[width=8cm]{Figures/Motor_Oled.png}
+  \caption{\small{Servo motor mg996r and Oled Display}}
   \label{fig:servo}
 \end{figure}
 
 In this project were used three of such servos to do a precise flap control, with them being controlled by the Arduino mega. To take into account the noise generated by the servos it was also put a 47 $\mu$F capacitor between the 6V and the ground.
 
-\subsubsection{OLED Display 1.6" \space LCD}
-\label{subsubsec:oleddisplay}
 As one of the interfaces with the user, this display shows to them several messages and the QR code that will be used to redeem the credits in the web app. This display has a 130x130 resolution and an I2C interface. It permits the creation of graphs, in our case QR codes, and texts with ease \cite{oleddisplay}.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=2cm]{Figures/Display-LCD-TFT-1.6-130x130-Transflectivo-6-600x600.jpg}
-  \caption{\small{OLED Display 1.6 inches}}
-  \label{fig:display}
-\end{figure}
-
-\subsubsection{Sensors}
+\subsubsection{Ultrasonic and Infrared Sensors}
 \label{subsubsec:ultrasonic}
 HC-SR04 is an ultrasonic ranging module that provides 2 cm to 400 cm non-contact measurement function\cite{ultrasonic}. To measure the fill level of each container an ultrasonic sensor Hc-sr04 module is used and to detect when something is thrown inside the Smart Recycler an infrared sensor is used.
 
 \subsection{Electronic Circuit}
-Beginning the project with the testing of all the components individually, making sure of their use and functionality, it was then necessary the creation of the first design of the electronic circuit. After the test of this first design on a breadboard, it was noticed some noises that were affecting the system. So to resolve this issue three capacitors were added, two between the 5V and ground and one between 6V and ground. Finally, everything was assembled on the standard board.
+The design began with the individual testing of all the components, making sure of their use and functionality. Then, the complete design of the electronic circuit was developed. After the test of this first design on a breadboard, some interferences were detected. So to resolve this issue three capacitors were added, two between the 5V and ground and one between 6V and ground. Finally, everything was assembled on a standard board.
 
-The ESP32-Cam is powered by the 5V regulator and communicates with the Arduino board via UART. The servo-motors that control the flaps, powered by the 6V regulator, are connected to the PWM pins of the Arduino board. The infrared, used to detect the opening of the gate, is powered by the 5V regulator and directly connected to the Arduino's GPIO. The led tape is directly connected to the 12V battery and a relay module. The relay module is then connected to the 5V regulator and the GPIO pin of the Arduino. The ultrasonic sensors are powered by the 5V regulator with the trigger pin connected to the GPIO and the echo pin to the PWM pins in the Arduino. With each red led corresponding to one ultrasonic sensor, indicating when the bin is full, they are connected to the 5V regulator and the GPIO pins of the Arduino.The O display is powered by the 5V regulator and communicates with the Arduino via the I2C pins. The schematic diagram is shown bellow in the figure \ref{fig:circuit}.
+The ESP32-Cam is powered by the 5V regulator and communicates with the Arduino board via UART. The servo-motors that control the flaps, powered by the 6V regulator, are connected to the PWM pins of the Arduino board. The infrared sensor, used to detect the opening of the gate, is powered by the 5V regulator and directly connected to the Arduino's GPIO. The led tape is directly connected to the 12V battery and a relay module. The relay module is then connected to the 5V regulator and the GPIO pin of the Arduino. The ultrasonic sensors are powered by the 5V regulator with the trigger pin connected to the GPIO and the echo pin to the PWM pins in the Arduino. Each red LED corresponding to one ultrasonic sensor, indicating when the bin is full, is connected to the 5V regulator and the GPIO pins of the Arduino.The OLED display is powered by the 5V regulator and communicates with the Arduino via the I2C pins. The schematic diagram is shown in figure \ref{fig:circuit}.
 \newpage
 
 \begin{figure}[H]
   \centering
   \includepdf[pages=-, angle=-90]{Figures/Circuit.pdf}
-  \caption{\small{Electronic circuit made with Altium}}
+  \caption{\small{Electronic circuit}}
   \label{fig:circuit}
 \end{figure}
 
@@ -439,7 +421,7 @@ The ESP32-Cam is powered by the 5V regulator and communicates with the Arduino b
 \subsection{Firmware}
 Since the project consists of two micro-controllers two firmware's were created, one for the ESP32 and the other for the Arduino Mega. The ESP32-Cam firmware was the first to be developed and, as pointed out before, its purpose is to take pictures of the waste items inside the Smart Recycler and communicate with the back end. Initially, the micro-controller keeps trying to establish a connection with a specified WiFi network only proceeding when successful.
 
-Once connected, the micro-controller awaits an OK signal from the Arduino Mega through its UART port. When this signal is received a timeout period of 10 seconds is started, activating the embedded camera. While the timeout period has not expired the micro-controller will then attempt to take a picture of the item inside.
+Once connected, the micro-controller awaits an OK signal from the Arduino Mega through its UART port. When this signal is received a timeout period of 10 seconds is started, activating the embedded camera. When the timeout period has expired the micro-controller will then attempt to take a picture of the item inside it.
 
 With the image captured the ESP32-Cam then tries to establish a connection with the back end so the image can be sent using \textit{HTTP POST} protocols. The received response from the back end is a \textit{JSON} string that is parsed using the \textit{ArduinoJSON} library \cite{ArduinoJson}. Finally, a response is sent to the Arduino Mega in a \textit{JSON} format containing the host IP address, image classification, and redeem code that will be used by the Arduino Mega to generate a \textit{QR Code} to be displayed to the user.
 
@@ -456,7 +438,7 @@ The Arduino Mega is the second micro-controller and is the one responsible for h
 
 After receiving a response from the ESP module the Arduino will then generate and display a \textit{QR Code} in the OLED display for the user and based on the classification received the motors will be rotated accordingly. It is worth noting that the motor from the first level must fully complete its movement before any of the motors from the second level begin theirs, so they won't collide with each other.
 
-After properly disposing of the item, the four ultrasonic sensors are measured, updating the fill level of each container. If any of the containers are filled enough so that the amount of waste inside it is within 10cm of the ultrasonic sensor the respective led will be turned on, signalizing that such container is full and no more waste can be disposed of there. If a container is full and an item that should be disposed of in such container is thrown inside the recycler, it will be directed to the \textit{Other} container instead.
+After properly disposing of the item, the four ultrasonic sensors are measured, updating the fill level of each container. If any of the containers are filled enough so that the amount of waste inside it is within 10cm of the ultrasonic sensor the respective led will be turned on, signalizing that such container is full and no more waste can be disposed of there. If a container is full and an item that should be disposed of in such container is thrown inside the recycler, it will be directed to the \textit{Other} container instead. When the \textit{Other} is also full, the thrash bins must be emptied.
 
 The final Arduino Mega firmware behavior can be seen in the state diagram in figure \ref{fig:arduinoState}.
 
@@ -469,9 +451,12 @@ The final Arduino Mega firmware behavior can be seen in the state diagram in fig
 
 \subsection{Back end}
 With the Flask framework, three different types of routes were created to expose the application functionalities, they were user-related routes, transaction-related routes, and classification-related routes.
-There are three routes related to users, one GET to acquire user information and two POSTs to sign in and sign up the user. User information is stored in the users database, and its password information is stored encrypted so that only the user knows their password.
+There are three routes related to users, one GET to acquire user information and two POSTs to sign in and sign up the user. User information is stored in the users database, and its password information is stored encrypted.
+
 There are two routes related to transactions, one POST to send transactions between users and another POST to give the user credits when redeeming a redeem code. Transactions require the username of the sender and the receiver and the amount to send, checks are made to ensure only proper transactions happen.
+
 Finally, there are two routes related to classifications, one POST that receives an image and returns the classification that the neural network model loaded thinks is most likely to be in the image and one GET route to get statistics about all the classifications made. Detailed information about routes and its configuration can be found at the project blog\cite{blog}.
+
 Finally, to support this routes, the ER Diagram shown in figure \ref{fig:er_diagram} was implemented in the database.
 
 \begin{figure}[H]
@@ -483,9 +468,9 @@ Finally, to support this routes, the ER Diagram shown in figure \ref{fig:er_diag
 
 \subsection{Web Application}
 \label{subsec:webapp}
-The web application was created so the user has an easy and functional way of interacting with the Smart Recycler, a web application was made instead of a native mobile application since it would be much easier for users to redeem credits if they don’t need to download a mobile application.
+The web application was created so the user has an easy and functional way of interacting with the Smart Recycler. A web application was made instead of a native mobile application since it would be much easier for users to redeem credits if they don’t need to download a mobile application.
 The web application is divided into two states: non-authenticated and authenticated. When non-authenticated, the user can sign in and sign up using the corresponding pages. When authenticated, the user can redeem credits, check their account balance, send credits to other users, and check Smart Recycler statistics. The redeem credits functionality works by the user reading the URL contained in the QR code sent by the Smart Recycler and being redirected to the web application, which will store redeem code information using browser cookies if the user is not authenticated and send the redeem credits to the Back end if the user is authenticated. Finally, to send credits the user only needs to specify the receiver and the amount to send.
-In the Figure \ref{fig:front_pages} all web application pages are shown.
+In Figure \ref{fig:front_pages} all web application pages are shown.
 
 \begin{figure}[H]
   \centering
@@ -495,7 +480,7 @@ In the Figure \ref{fig:front_pages} all web application pages are shown.
 \end{figure}
 
 \subsection{Inference System}
-The inference system was one of the hardest parts to develop in the project since we had a problem specific to it, which was detecting some types of trash thrown in the Smart Recycler, a custom dataset was needed to properly classify our desired objects. To create this custom dataset, we used embedded software that was uploaded in the ESP32 to take images and upload them to a Google Drive folder, allowing us the fast creation of a dataset with images taken directly from inside the Smart Recycler top compartment. Then we used an object tagging tool, VoTT, to annotate the images with the desired classes that we wanted to classify. In Figure \ref{fig:annotation_example} is an example of the annotation process is shown.
+The inference system was one of the hardest parts to develop in the project since we had a problem specific to it, which was detecting some types of trash thrown in the Smart Recycler, a custom dataset was needed to properly classify our desired objects. To create this custom dataset, we used embedded software that was uploaded in the ESP32 to take images and upload them to a Google Drive folder, allowing us the fast creation of a dataset with images taken directly from inside the Smart Recycler top compartment. Then we used an object tagging tool, VoTT, to annotate the images with the desired classes that we wanted to classify. In Figure \ref{fig:annotation_example} an example of the annotation process is shown.
 
 \begin{figure}[H]
   \centering
@@ -523,7 +508,7 @@ For the training process, multiple parameters must be chosen, the technique used
 \end{figure}
 
 \subsection{Budget}
-The following table details the project budget and the amount of money spent on every item. The total estimated cost of the project was R\$ 838,00 but during the development the ESP32-Cam micro-controller was damaged and had to be replaced, increasing the final budget by R\$ 86,00, totaling R\$ 924,00 which was divided between three team members or R\$ 308,00 each.
+Table \ref{tab:budget} details the project budget and the amount of money spent on every item. The total estimated cost of the project was R\$ 838,00 but during the development the ESP32-Cam micro-controller was damaged and had to be replaced, increasing the final budget by R\$ 86,00, totaling R\$ 924,00 which was divided between three team members or R\$ 308,00 each.
 
 % Budget table
 \begin{table}[H]
@@ -550,7 +535,7 @@ The following table details the project budget and the amount of money spent on 
 \end{table}
 
 \subsection{Schedule}
-The table below details the estimated and worked hours during the development of the project over the course of nine weeks.
+Table \ref{tab:schedule} details the estimated and worked hours during the development of the project over the course of nine weeks.
 
 % Schedule table
 \begin{table}[H]
@@ -578,7 +563,7 @@ The table below details the estimated and worked hours during the development of
 \section{Results and Conclusions}
 Despite being a mechanically complex project, with several challenges such as movement coordination and image classification, some good results were obtained in the end and the team believes that such a system could be beneficial if implemented in any environment, not only in the planned one. Some major problems presented themselves along with the development, such as the low accuracy of the first trained inference system and the handling of the motors when dealing with heavy objects.
 
-Through the tests performed it was possible to detect some problems that weren't seen in the planning phase. So inevitably some changes had to be made to resolve them. The first time the mechanical structure was totally assembled a problem was noted. The first layer flap and the second layer were too close to each other, and that lead to some waste being stuck between them. To resolve this issue a 10cm separation was added between the top and middle part, which resolved the issue. As seen in figure \ref{fig:adjustment}.
+Through the tests performed it was possible to detect some problems that weren't seen in the planning phase. So inevitably some changes had to be made to resolve them. The first time the mechanical structure was totally assembled a problem was noted. The first layer flap and the second layer were too close to each other, and that lead to some waste being stuck between them. To resolve this issue a 10cm separation was added between the top and middle part, which resolved the issue (figure \ref{fig:adjustment}).
 
 \begin{figure}[H]
   \centering
@@ -587,7 +572,7 @@ Through the tests performed it was possible to detect some problems that weren't
   \label{fig:adjustment}
 \end{figure}
 
-Another problem was the resiliance of parts of the servo motors, which were sometimes breaking themselves in their rotating movement. This problem was solved by switching the plastic gears inside the servos for metal ones, and by applying a smoother sweep, through code, when turning so that they have less pressure in their parts.
+Another problem was the resilience of parts of the servo motors, which were sometimes breaking themselves in their rotating movement. This problem was solved by switching the plastic gears inside the servos with metalic ones, and by applying a smoother sweep, through code, when turning so that they have less pressure in their parts.
 
 Being the source of most of the mechanical and hardware problems, another issue found with the motors was the noise caused in the circuit. This hindrance was neatly solved by adding some filter capacitors in some of the key parts of the system, such as between 5V and Ground, and between 6V and Ground.
 
