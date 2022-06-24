@@ -17,6 +17,7 @@ def classificationRequest():
         image_path = os.path.join(STORAGE_PATH, redeem_code + '.jpg')
         request.files['file'].save(image_path)
         label = classify(image_path)
+        label = label if label != 0 else 6
         classification = {
             'recycler_id': recycler_id,
             'label': label,
